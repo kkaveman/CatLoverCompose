@@ -35,7 +35,7 @@ sealed class BottomNavItem(
     object Event : BottomNavItem(NavDestinations.Event.route, Icons.Default.DateRange, "Events")
     object Community : BottomNavItem(NavDestinations.Community.route, Icons.Default.ThumbUp, "Community")
 
-    object Screening : BottomNavItem(NavDestinations.Screening.route, Icons.Default.Search, "Screening")
+    object Screening : BottomNavItem(NavDestinations.Screening.route, Icons.Default.Api, "Screening")
 
 
 }
@@ -234,9 +234,3 @@ fun DrawerContent(
     }
 }
 
-@Preview(showBackground = true)
-@Composable
-fun AppShellPreview(){
-    val navController = rememberNavController()
-    AppShell(mainNavController = navController)
-}

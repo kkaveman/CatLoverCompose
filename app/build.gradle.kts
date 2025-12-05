@@ -71,7 +71,7 @@ dependencies {
     implementation("com.google.firebase:firebase-auth:24.0.1")
     implementation("com.google.firebase:firebase-database:22.0.1")
     implementation("com.google.firebase:firebase-storage:22.0.1")
-
+    implementation("androidx.compose.material:material-icons-extended:1.7.8")
     implementation("com.google.firebase:firebase-firestore:26.0.2")
 
 }
