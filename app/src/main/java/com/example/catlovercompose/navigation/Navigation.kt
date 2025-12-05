@@ -10,6 +10,7 @@ import com.example.catlovercompose.feature.screens.chatsection.chat.ChatScreen
 import com.example.catlovercompose.feature.auth.signin.SignInScreen
 import com.example.catlovercompose.feature.auth.signup.SignUpScreen
 import com.example.catlovercompose.feature.profile.ProfileScreen
+import com.example.catlovercompose.feature.profile.EditProfileScreen
 import com.example.catlovercompose.feature.screens.admin.AdminScreen
 import com.example.catlovercompose.feature.screens.settings.SettingsScreen
 
@@ -43,6 +44,10 @@ fun AppNavigation() {
             ProfileScreen(navController)
         }
 
+        composable(NavDestinations.EditProfile.route) {
+            EditProfileScreen(navController)
+        }
+
         composable(NavDestinations.Admin.route) {
             AdminScreen(navController)
         }
@@ -55,6 +60,8 @@ fun AppNavigation() {
         composable(NavDestinations.Channel.route) {
             ChannelScreen(navController)
         }
+
+
 
         // Individual chat screen with channelId parameter
         composable("${NavDestinations.Chat.route}/{channelId}") { backStackEntry ->

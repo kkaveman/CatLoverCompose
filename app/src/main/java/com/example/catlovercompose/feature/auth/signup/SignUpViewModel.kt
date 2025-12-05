@@ -60,7 +60,8 @@ class SignUpViewModel @Inject constructor(
                 profileImageUrl = null,
                 age = null,
                 gender = 2,
-                role = 0
+                role = 0,
+
             )
 
             userRepository.createUserProfile(userProfile)

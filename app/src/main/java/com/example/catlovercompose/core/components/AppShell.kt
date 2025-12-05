@@ -16,11 +16,15 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.example.catlovercompose.core.util.AuthState
-import com.example.catlovercompose.feature.community.CommunityScreen
-import com.example.catlovercompose.feature.event.EventScreen
-import com.example.catlovercompose.feature.screens.admin.AdminScreen
+
 import com.example.catlovercompose.feature.screens.home.HomeScreen
+import com.example.catlovercompose.feature.event.EventScreen
+import com.example.catlovercompose.feature.community.CommunityScreen
 import com.example.catlovercompose.feature.screens.screening.ScreeningScreen
+import com.example.catlovercompose.feature.screens.finduser.FindUserScreen
+
+import com.example.catlovercompose.feature.screens.admin.AdminScreen
+
 import com.example.catlovercompose.feature.screens.settings.SettingsScreen
 import com.example.catlovercompose.navigation.NavDestinations
 import kotlinx.coroutines.launch
@@ -37,6 +41,7 @@ sealed class BottomNavItem(
 
     object Screening : BottomNavItem(NavDestinations.Screening.route, Icons.Default.Api, "Screening")
 
+    object FindUser : BottomNavItem(NavDestinations.FindUser.route, Icons.Default.Search, "Find User")
 
 }
 
@@ -54,7 +59,8 @@ fun AppShell(mainNavController: NavController) {
         BottomNavItem.Home,
         BottomNavItem.Event,
         BottomNavItem.Community,
-        BottomNavItem.Screening
+        BottomNavItem.Screening,
+        BottomNavItem.FindUser
     )
 
     ModalNavigationDrawer(
@@ -143,6 +149,11 @@ fun AppShell(mainNavController: NavController) {
                 composable(NavDestinations.Screening.route) {
                     ScreeningScreen()
                 }
+
+                composable (NavDestinations.FindUser.route){
+                    FindUserScreen()
+                }
+
                 composable(NavDestinations.Settings.route) {
                     SettingsScreen(mainNavController)
                 }

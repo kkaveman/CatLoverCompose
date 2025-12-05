@@ -9,9 +9,13 @@ data class UserProfile(
     val bio: String = "",
     val email: String = "",
     val profileImageUrl: String? = null,
+
     val age: Int? = null,
     val gender: Int = 2, // 0=male, 1=female, 2=other/unspecified
     val role: Int = 0, // 0=user, 1=admin
+
+    val followers: Int = 0,
+//
     val createdAt: Long = System.currentTimeMillis(),
     val updatedAt: Long = System.currentTimeMillis()
 )
@@ -25,6 +29,8 @@ fun UserProfile.toMap(): Map<String, Any?> = mapOf(
     "age" to age,
     "gender" to gender,
     "role" to role,
+
+
     "createdAt" to createdAt,
     "updatedAt" to updatedAt
 )

@@ -13,7 +13,12 @@ sealed class NavDestinations(val route: String) {
 
     object Screening : NavDestinations("screening")
 
+    object FindUser : NavDestinations("finduser")
+
     object Profile : NavDestinations("profile")
+
+    object EditProfile : NavDestinations("editprofile")
+
     object Settings : NavDestinations("settings")
 
     // App shell route (wrapper for bottom nav screens)
