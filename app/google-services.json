@@ -1,0 +1,30 @@
+{
+  "project_info": {
+    "project_number": "1032854542760",
+    "firebase_url": "https://catlovercompose-c4ac1-default-rtdb.asia-southeast1.firebasedatabase.app",
+    "project_id": "catlovercompose-c4ac1",
+    "storage_bucket": "catlovercompose-c4ac1.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1032854542760:android:7cb6d58c4b10ccd0cf259d",
+        "android_client_info": {
+          "package_name": "com.example.catlovercompose"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBG6DQsb8hISwB7W4AJVHymukkfDF6tfG4"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
