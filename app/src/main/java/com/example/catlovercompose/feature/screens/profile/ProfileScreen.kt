@@ -140,7 +140,7 @@ fun ProfileScreen(
                 horizontalArrangement = Arrangement.SpaceEvenly
             ) {
                 StatItem(
-                    count = userPosts.size, /*TODO*/
+                    count = uiState.postCount,  // Changed from userPosts.size to uiState.postCount
                     label = "Posts"
                 )
 
@@ -216,8 +216,18 @@ fun ProfileScreen(
             )
 
             // Posts Grid
-            if (userPosts.isEmpty()) {
-                // Empty state
+            // Replace these sections in your ProfileScreen.kt:
+
+// 1. Update the StatItem for Posts:
+            StatItem(
+                count = uiState.postCount,  // Changed from userPosts.size to uiState.postCount
+                label = "Posts"
+            )
+
+// 2. Replace the "Posts Grid" section (after "Posts Section Header"):
+// Posts Grid
+            if (uiState.userPosts.isEmpty()) {
+                // Empty state (keep existing code)
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -244,9 +254,9 @@ fun ProfileScreen(
                     )
                 }
             } else {
-                // Grid of posts (3 columns)
+                // Grid of posts (3 columns) - showing post images
                 Column(modifier = Modifier.padding(horizontal = 4.dp)) {
-                    val rows = userPosts.chunked(3)
+                    val rows = uiState.userPosts.chunked(3)
                     rows.forEach { rowPosts ->
                         Row(
                             modifier = Modifier
@@ -261,15 +271,32 @@ fun ProfileScreen(
                                         .aspectRatio(1f)
                                         .clip(RoundedCornerShape(4.dp))
                                         .background(MaterialTheme.colorScheme.surfaceVariant)
-                                        .clickable { /* Navigate to post detail */ }
+                                        .clickable { /* TODO: Navigate to post detail */ }
                                 ) {
-                                    // Post image would go here
-                                    AsyncImage(
-                                        model = post,
-                                        contentDescription = "Post",
-                                        modifier = Modifier.fillMaxSize(),
-                                        contentScale = ContentScale.Crop
-                                    )
+                                    // Display post image if available, otherwise show placeholder
+                                    if (post.imageUrl != null) {
+                                        AsyncImage(
+                                            model = post.imageUrl,
+                                            contentDescription = "Post",
+                                            modifier = Modifier.fillMaxSize(),
+                                            contentScale = ContentScale.Crop
+                                        )
+                                    } else {
+                                        // Text-only post placeholder
+                                        Box(
+                                            modifier = Modifier
+                                                .fillMaxSize()
+                                                .background(MaterialTheme.colorScheme.primaryContainer),
+                                            contentAlignment = Alignment.Center
+                                        ) {
+                                            Text(
+                                                text = post.content.take(50),
+                                                style = MaterialTheme.typography.bodySmall,
+                                                maxLines = 3,
+                                                modifier = Modifier.padding(4.dp)
+                                            )
+                                        }
+                                    }
                                 }
                             }
                             // Fill remaining slots with empty boxes

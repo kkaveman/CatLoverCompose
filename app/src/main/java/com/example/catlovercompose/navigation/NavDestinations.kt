@@ -28,4 +28,6 @@ sealed class NavDestinations(val route: String) {
 
     object Channel : NavDestinations("channel")
     object Chat : NavDestinations("chat") // chat/{channelId}
+
+    object AddPost : NavDestinations("addpost")
 }

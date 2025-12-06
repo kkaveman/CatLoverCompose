@@ -5,6 +5,8 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.example.catlovercompose.core.components.AppShell
+
+import com.example.catlovercompose.feature.screens.community.postsection.AddPostScreen
 import com.example.catlovercompose.feature.screens.chatsection.channel.ChannelScreen
 import com.example.catlovercompose.feature.screens.chatsection.chat.ChatScreen
 import com.example.catlovercompose.feature.auth.signin.SignInScreen
@@ -61,7 +63,9 @@ fun AppNavigation() {
             ChannelScreen(navController)
         }
 
-
+        composable(NavDestinations.AddPost.route) {
+            AddPostScreen(navController)
+        }
 
         // Individual chat screen with channelId parameter
         composable("${NavDestinations.Chat.route}/{channelId}") { backStackEntry ->

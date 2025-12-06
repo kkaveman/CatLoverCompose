@@ -1,6 +1,7 @@
 package com.example.catlovercompose.di
 
 import com.example.catlovercompose.core.repository.ChatRepository
+import com.example.catlovercompose.core.repository.PostRepository
 import com.example.catlovercompose.core.repository.UserRepository
 import dagger.Module
 import dagger.Provides
@@ -22,5 +23,11 @@ object RepositoryModule {
     @Singleton
     fun provideChatRepository(userRepository: UserRepository): ChatRepository {
         return ChatRepository(userRepository)
+    }
+
+    @Provides
+    @Singleton
+    fun providePostRepository(userRepository: UserRepository): PostRepository {
+        return PostRepository(userRepository)
     }
 }

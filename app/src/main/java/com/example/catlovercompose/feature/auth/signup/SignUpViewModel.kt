@@ -61,6 +61,7 @@ class SignUpViewModel @Inject constructor(
                 age = null,
                 gender = 2,
                 role = 0,
+                postCount = 0,
 
             )
 

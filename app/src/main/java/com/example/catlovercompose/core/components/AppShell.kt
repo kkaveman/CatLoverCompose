@@ -24,6 +24,7 @@ import com.example.catlovercompose.feature.screens.screening.ScreeningScreen
 import com.example.catlovercompose.feature.screens.finduser.FindUserScreen
 
 import com.example.catlovercompose.feature.screens.admin.AdminScreen
+import com.example.catlovercompose.feature.screens.community.postsection.AddPostScreen
 
 import com.example.catlovercompose.feature.screens.settings.SettingsScreen
 import com.example.catlovercompose.navigation.NavDestinations
@@ -106,9 +107,13 @@ fun AppShell(mainNavController: NavController) {
                             Icon(Icons.Default.Menu, contentDescription = "Menu")
                         }
                     },
+
                     actions = {
-                        IconButton(onClick = { mainNavController.navigate(NavDestinations.Channel.route) }) {
-                            Icon(Icons.Default.Email, contentDescription = "Chat")
+                        // Only show email icon if user is signed in
+                        if (AuthState.isUserSignedIn()) {
+                            IconButton(onClick = { mainNavController.navigate(NavDestinations.Channel.route) }) {
+                                Icon(Icons.Default.Email, contentDescription = "Chat")
+                            }
                         }
                     }
                 )
@@ -144,14 +149,19 @@ fun AppShell(mainNavController: NavController) {
                     EventScreen()
                 }
                 composable(NavDestinations.Community.route) {
-                    CommunityScreen()
+                    CommunityScreen(mainNavController)
                 }
+
                 composable(NavDestinations.Screening.route) {
                     ScreeningScreen()
                 }
 
                 composable (NavDestinations.FindUser.route){
                     FindUserScreen()
+                }
+
+                composable(NavDestinations.AddPost.route) {
+                    AddPostScreen(mainNavController)
                 }
 
                 composable(NavDestinations.Settings.route) {

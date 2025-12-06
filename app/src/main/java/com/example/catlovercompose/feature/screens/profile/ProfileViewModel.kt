@@ -5,9 +5,10 @@ import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.navigation.NavController
+import com.example.catlovercompose.core.model.Post
+import com.example.catlovercompose.core.repository.PostRepository
 import com.example.catlovercompose.core.repository.UserRepository
 import com.example.catlovercompose.core.util.AuthState
-
 import com.example.catlovercompose.navigation.NavDestinations
 import com.google.firebase.auth.UserProfileChangeRequest
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -18,7 +19,8 @@ import javax.inject.Inject
 
 @HiltViewModel
 class ProfileViewModel @Inject constructor(
-    private val userRepository: UserRepository
+    private val userRepository: UserRepository,
+    private val postRepository: PostRepository
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(ProfileState())
@@ -26,6 +28,7 @@ class ProfileViewModel @Inject constructor(
 
     init {
         loadUserData()
+        loadUserPosts()
     }
 
     private fun loadUserData() {
@@ -34,35 +37,46 @@ class ProfileViewModel @Inject constructor(
         viewModelScope.launch {
             _state.value = _state.value.copy(isLoading = true)
 
-            // First, ensure user is migrated from RTDB to Firestore if needed
-
             // Now load from Firestore
             userRepository.getUserProfile(user.uid)
                 .onSuccess { profile ->
-                    _state.value = ProfileState(
+                    _state.value = _state.value.copy(
                         username = profile?.username ?: user.displayName ?: "User",
                         bio = profile?.bio,
                         email = profile?.email ?: user.email ?: "No email",
                         profileImageUrl = profile?.profileImageUrl,
                         age = profile?.age,
                         gender = profile?.gender ?: 2,
+                        postCount = profile?.postCount ?: 0,
                         isLoading = false
                     )
                 }
                 .onFailure { e ->
                     Log.e("PROFILE", "Failed to load profile: ${e.message}")
                     // Fallback to Firebase Auth data
-                    _state.value = ProfileState(
+                    _state.value = _state.value.copy(
                         username = user.displayName ?: user.email?.substringBefore("@") ?: "User",
                         bio = "",
                         email = user.email ?: "No email",
                         profileImageUrl = null,
                         age = null,
                         gender = 2,
+                        postCount = 0,
                         isLoading = false,
                         error = "Failed to load profile"
                     )
                 }
+        }
+    }
+
+    private fun loadUserPosts() {
+        val user = AuthState.getCurrentUser() ?: return
+
+        viewModelScope.launch {
+            postRepository.getUserPosts(user.uid).collect { posts ->
+                _state.value = _state.value.copy(userPosts = posts)
+                Log.d("PROFILE", "Loaded ${posts.size} user posts")
+            }
         }
     }
 
@@ -152,6 +166,8 @@ data class ProfileState(
     val profileImageUrl: String? = null,
     val age: Int? = null,
     val gender: Int = 2, // 0=male, 1=female, 2=other
+    val postCount: Int = 0,
+    val userPosts: List<Post> = emptyList(),
     val isLoading: Boolean = false,
     val isUploadingImage: Boolean = false,
     val isSaving: Boolean = false,
