@@ -150,13 +150,15 @@ fun PostCard(
             // Action buttons: Like, Comment
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
+                horizontalArrangement = Arrangement.Start,  // ✅ Changed from SpaceBetween to Start
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 // Like Button
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.clickable(onClick = onLikeClick)
+                    modifier = Modifier
+                        .clickable(onClick = onLikeClick)
+                        .padding(8.dp)
                 ) {
                     Icon(
                         imageVector = if (isLiked) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
@@ -164,7 +166,7 @@ fun PostCard(
                         tint = if (isLiked) Color.Red else MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.size(24.dp)
                     )
-                    Spacer(modifier = Modifier.width(4.dp))
+                    Spacer(modifier = Modifier.width(6.dp))  // ✅ Space between icon and count
                     Text(
                         text = "${post.likeCount}",
                         style = MaterialTheme.typography.bodyMedium,
@@ -172,10 +174,14 @@ fun PostCard(
                     )
                 }
 
-                // Comment Button (TODO)
+                Spacer(modifier = Modifier.width(8.dp))  // ✅ Space between Like and Comment buttons
+
+                // Comment Button
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.clickable(onClick = onCommentClick)
+                    modifier = Modifier
+                        .clickable(onClick = onCommentClick)
+                        .padding(8.dp)
                 ) {
                     Icon(
                         Icons.Default.Email,
@@ -183,7 +189,7 @@ fun PostCard(
                         tint = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.size(24.dp)
                     )
-                    Spacer(modifier = Modifier.width(4.dp))
+                    Spacer(modifier = Modifier.width(6.dp))  // ✅ Space between icon and count
                     Text(
                         text = "${post.commentCount}",
                         style = MaterialTheme.typography.bodyMedium,
