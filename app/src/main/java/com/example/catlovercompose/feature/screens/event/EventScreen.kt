@@ -53,34 +53,47 @@ fun EventScreen(
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
     ) {
-        // Filter Tabs
-        TabRow(
-            selectedTabIndex = selectedFilter.ordinal,
-            containerColor = MaterialTheme.colorScheme.surface,
-            modifier = Modifier.fillMaxWidth()
+        // Filter Toggle Switch
+        Surface(
+            modifier = Modifier.fillMaxWidth(),
+            color = MaterialTheme.colorScheme.surface,
+            shadowElevation = 2.dp
         ) {
-            Tab(
-                selected = selectedFilter == EventFilter.ALL,
-                onClick = { selectedFilter = EventFilter.ALL },
-                text = {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 12.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column {
                     Text(
-                        "All Events",
-                        fontWeight = if (selectedFilter == EventFilter.ALL)
-                            FontWeight.Bold else FontWeight.Normal
+                        text = "Show only joined events",
+                        style = MaterialTheme.typography.bodyLarge,
+                        fontWeight = FontWeight.Medium
                     )
+                    if (selectedFilter == EventFilter.JOINED) {
+                        Text(
+                            text = "${filteredEvents.size} joined event${if (filteredEvents.size != 1) "s" else ""}",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
                 }
-            )
-            Tab(
-                selected = selectedFilter == EventFilter.JOINED,
-                onClick = { selectedFilter = EventFilter.JOINED },
-                text = {
-                    Text(
-                        "Joined",
-                        fontWeight = if (selectedFilter == EventFilter.JOINED)
-                            FontWeight.Bold else FontWeight.Normal
+
+                Switch(
+                    checked = selectedFilter == EventFilter.JOINED,
+                    onCheckedChange = { isChecked ->
+                        selectedFilter = if (isChecked) EventFilter.JOINED else EventFilter.ALL
+                    },
+                    colors = SwitchDefaults.colors(
+                        checkedThumbColor = MaterialTheme.colorScheme.primary,
+                        checkedTrackColor = MaterialTheme.colorScheme.primaryContainer,
+                        uncheckedThumbColor = MaterialTheme.colorScheme.outline,
+                        uncheckedTrackColor = MaterialTheme.colorScheme.surfaceVariant
                     )
-                }
-            )
+                )
+            }
         }
 
         // Content

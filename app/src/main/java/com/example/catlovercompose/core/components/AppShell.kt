@@ -1,13 +1,12 @@
 package com.example.catlovercompose.core.components
+
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import androidx.navigation.NavDestination.Companion.hierarchy
@@ -24,11 +23,16 @@ import com.example.catlovercompose.feature.screens.screening.ScreeningScreen
 import com.example.catlovercompose.feature.screens.finduser.FindUserScreen
 
 import com.example.catlovercompose.feature.screens.admin.AdminScreen
-import com.example.catlovercompose.feature.screens.admin.eventcrud.EventCRUDScreen
 import com.example.catlovercompose.feature.screens.community.postsection.AddPostScreen
 import com.example.catlovercompose.feature.screens.event.SingleEventScreen
-
 import com.example.catlovercompose.feature.screens.settings.SettingsScreen
+
+import com.example.catlovercompose.feature.profile.ProfileScreen
+import com.example.catlovercompose.feature.profile.EditProfileScreen
+import com.example.catlovercompose.feature.profile.OtherProfileScreen
+import com.example.catlovercompose.feature.screens.chatsection.channel.ChannelScreen
+import com.example.catlovercompose.feature.screens.chatsection.chat.ChatScreen
+
 import com.example.catlovercompose.navigation.NavDestinations
 import kotlinx.coroutines.launch
 
@@ -41,11 +45,8 @@ sealed class BottomNavItem(
     object Home : BottomNavItem(NavDestinations.Home.route, Icons.Default.Home, "Home")
     object Event : BottomNavItem(NavDestinations.Event.route, Icons.Default.DateRange, "Events")
     object Community : BottomNavItem(NavDestinations.Community.route, Icons.Default.ThumbUp, "Community")
-
     object Screening : BottomNavItem(NavDestinations.Screening.route, Icons.Default.Api, "Screening")
-
     object FindUser : BottomNavItem(NavDestinations.FindUser.route, Icons.Default.Search, "Find User")
-
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -57,9 +58,17 @@ fun AppShell(mainNavController: NavController) {
     val navBackStackEntry by shellNavController.currentBackStackEntryAsState()
     val currentDestination = navBackStackEntry?.destination
 
-    // Check if current route is SingleEventScreen
     val currentRoute = currentDestination?.route
-    val isSingleEventScreen = currentRoute?.startsWith("${NavDestinations.SingleEvent.route}/") == true
+
+    // ✅ UPDATED: Check for routes that should hide TopBar and BottomBar
+    val shouldHideShellBars = currentRoute?.startsWith("${NavDestinations.SingleEvent.route}/") == true ||
+            currentRoute == NavDestinations.Channel.route ||
+            currentRoute?.startsWith("${NavDestinations.Chat.route}/") == true ||
+            currentRoute == NavDestinations.Profile.route ||
+            currentRoute == NavDestinations.EditProfile.route ||
+            currentRoute?.startsWith("${NavDestinations.OtherProfile.route}/") == true ||
+            currentRoute == NavDestinations.Settings.route ||
+            currentRoute == NavDestinations.Admin.route
 
     val bottomNavItems = listOf(
         BottomNavItem.Home,
@@ -74,23 +83,23 @@ fun AppShell(mainNavController: NavController) {
         drawerContent = {
             ModalDrawerSheet {
                 DrawerContent(
-                    //add new navigations here if
-                    // only want to put in drawer + topbar.. topbar should be
-                    // in the screen.kt file
                     onNavigateToSettings = {
                         scope.launch { drawerState.close() }
-                        mainNavController.navigate(NavDestinations.Settings.route) {
+                        shellNavController.navigate(NavDestinations.Settings.route) {
                             launchSingleTop = true
                         }
                     },
-
                     onNavigateToProfile = {
                         scope.launch { drawerState.close() }
-                        mainNavController.navigate(NavDestinations.Profile.route)
+                        shellNavController.navigate(NavDestinations.Profile.route) {
+                            launchSingleTop = true
+                        }
                     },
                     onNavigateToAdmin = {
                         scope.launch { drawerState.close() }
-                        mainNavController.navigate(NavDestinations.Admin.route)
+                        shellNavController.navigate(NavDestinations.Admin.route) {
+                            launchSingleTop = true
+                        }
                     },
                     onSignOut = {
                         scope.launch { drawerState.close() }
@@ -102,13 +111,13 @@ fun AppShell(mainNavController: NavController) {
                 )
             }
         },
-        // Disable drawer on SingleEventScreen
-        gesturesEnabled = !isSingleEventScreen
+        // ✅ UPDATED: Disable drawer for all screens with custom TopBar
+        gesturesEnabled = !shouldHideShellBars
     ) {
         Scaffold(
             topBar = {
-                // Hide top bar on SingleEventScreen
-                if (!isSingleEventScreen) {
+                // ✅ UPDATED: Hide TopBar for screens with custom TopBar
+                if (!shouldHideShellBars) {
                     TopAppBar(
                         title = { Text("Cat Lover") },
                         navigationIcon = {
@@ -116,11 +125,11 @@ fun AppShell(mainNavController: NavController) {
                                 Icon(Icons.Default.Menu, contentDescription = "Menu")
                             }
                         },
-
                         actions = {
-                            // Only show email icon if user is signed in
                             if (AuthState.isUserSignedIn()) {
-                                IconButton(onClick = { mainNavController.navigate(NavDestinations.Channel.route) }) {
+                                IconButton(onClick = {
+                                    shellNavController.navigate(NavDestinations.Channel.route)
+                                }) {
                                     Icon(Icons.Default.Email, contentDescription = "Chat")
                                 }
                             }
@@ -129,8 +138,8 @@ fun AppShell(mainNavController: NavController) {
                 }
             },
             bottomBar = {
-                // Hide bottom bar on SingleEventScreen
-                if (!isSingleEventScreen) {
+                // ✅ UPDATED: Hide BottomBar for screens with custom TopBar
+                if (!shouldHideShellBars) {
                     NavigationBar {
                         bottomNavItems.forEach { item ->
                             NavigationBarItem(
@@ -154,17 +163,28 @@ fun AppShell(mainNavController: NavController) {
                 navController = shellNavController,
                 startDestination = NavDestinations.Home.route,
                 modifier = Modifier.padding(
-                    // Don't apply padding on SingleEventScreen so it can be edge-to-edge
-                    if (isSingleEventScreen) PaddingValues(0.dp) else paddingValues
+                    // ✅ UPDATED: Don't apply padding for screens with custom TopBar
+                    if (shouldHideShellBars) PaddingValues(0.dp) else paddingValues
                 )
             ) {
+                // Bottom Nav Screens
                 composable(NavDestinations.Home.route) {
                     HomeScreen(mainNavController)
                 }
                 composable(NavDestinations.Event.route) {
                     EventScreen(shellNavController)
                 }
-                // Inside AppShell NavHost, after AddPost composable:
+                composable(NavDestinations.Community.route) {
+                    CommunityScreen(shellNavController)
+                }
+                composable(NavDestinations.Screening.route) {
+                    ScreeningScreen()
+                }
+                composable(NavDestinations.FindUser.route) {
+                    FindUserScreen(shellNavController)
+                }
+
+                // Event Detail
                 composable("${NavDestinations.SingleEvent.route}/{eventId}") { backStackEntry ->
                     val eventId = backStackEntry.arguments?.getString("eventId") ?: ""
                     SingleEventScreen(
@@ -172,31 +192,46 @@ fun AppShell(mainNavController: NavController) {
                         eventId = eventId
                     )
                 }
-                composable(NavDestinations.Community.route) {
-                    CommunityScreen(mainNavController)
-                }
 
-                composable(NavDestinations.Screening.route) {
-                    ScreeningScreen()
-                }
-
-                composable (NavDestinations.FindUser.route){
-                    FindUserScreen()
-                }
-
+                // Post Creation
                 composable(NavDestinations.AddPost.route) {
-                    AddPostScreen(mainNavController)
+                    AddPostScreen(shellNavController)
                 }
 
+                // Profile Screens
+                composable(NavDestinations.Profile.route) {
+                    ProfileScreen(shellNavController)
+                }
+                composable(NavDestinations.EditProfile.route) {
+                    EditProfileScreen(shellNavController)
+                }
+                composable("${NavDestinations.OtherProfile.route}/{userId}") { backStackEntry ->
+                    val userId = backStackEntry.arguments?.getString("userId") ?: ""
+                    OtherProfileScreen(
+                        navController = shellNavController,
+                        userId = userId
+                    )
+                }
+
+                // Settings & Admin
                 composable(NavDestinations.Settings.route) {
-                    SettingsScreen(mainNavController)
+                    SettingsScreen(shellNavController)
                 }
-
                 composable(NavDestinations.Admin.route) {
-                    AdminScreen(mainNavController)
+                    AdminScreen(shellNavController)
                 }
 
-
+                // Chat Screens
+                composable(NavDestinations.Channel.route) {
+                    ChannelScreen(shellNavController)
+                }
+                composable("${NavDestinations.Chat.route}/{channelId}") { backStackEntry ->
+                    val channelId = backStackEntry.arguments?.getString("channelId") ?: ""
+                    ChatScreen(
+                        navController = shellNavController,
+                        channelId = channelId
+                    )
+                }
             }
         }
     }
@@ -210,8 +245,14 @@ fun DrawerContent(
     onSignOut: () -> Unit
 ) {
     val user = AuthState.getCurrentUser()
-    var isSignedIn = AuthState.isUserSignedIn()
+    val isSignedIn = AuthState.isUserSignedIn()
     var isAdmin by remember { mutableStateOf(false) }
+
+    LaunchedEffect(isSignedIn) {
+        if (isSignedIn) {
+            isAdmin = AuthState.isAdmin()
+        }
+    }
 
     Column {
         // User Info Header
@@ -231,19 +272,16 @@ fun DrawerContent(
             }
         }
 
-        if(isSignedIn) {
+        if (isSignedIn) {
             NavigationDrawerItem(
                 icon = { Icon(Icons.Default.Person, contentDescription = null) },
                 label = { Text("Profile") },
                 selected = false,
-                onClick = {onNavigateToProfile()}
+                onClick = onNavigateToProfile
             )
         }
 
         Divider()
-
-        // Menu Items
-
 
         NavigationDrawerItem(
             icon = { Icon(Icons.Default.Settings, contentDescription = null) },
@@ -251,13 +289,6 @@ fun DrawerContent(
             selected = false,
             onClick = onNavigateToSettings
         )
-
-
-        LaunchedEffect(isSignedIn) {
-            if (isSignedIn) {
-                isAdmin = AuthState.isAdmin() // suspend OK here
-            }
-        }
 
         if (isSignedIn && isAdmin) {
             Divider()
@@ -272,9 +303,8 @@ fun DrawerContent(
         Divider()
 
         NavigationDrawerItem(
-
             icon = { Icon(Icons.Default.ExitToApp, contentDescription = null) },
-            label = { if(isSignedIn) Text("Sign Out") else Text("Sign In")},
+            label = { if (isSignedIn) Text("Sign Out") else Text("Sign In") },
             selected = false,
             onClick = onSignOut
         )

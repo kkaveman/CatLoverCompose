@@ -1,21 +1,15 @@
 package com.example.catlovercompose.feature.profile
 
-import android.net.Uri
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.grid.GridCells
-import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -24,35 +18,30 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
-import androidx.navigation.compose.rememberNavController
 import coil.compose.AsyncImage
-import com.example.catlovercompose.feature.profile.follow.FollowersDialog
-import com.example.catlovercompose.feature.profile.follow.FollowingDialog
+import com.example.catlovercompose.feature.screens.finduser.otherprofile.OtherProfileViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ProfileScreen(
+fun OtherProfileScreen(
     navController: NavController,
-    viewModel: ProfileViewModel = hiltViewModel()
+    userId: String,
+    viewModel: OtherProfileViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.state.collectAsState()
 
-    // Image picker launcher
-    val imagePickerLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.GetContent()
-    ) { uri: Uri? ->
-        uri?.let { viewModel.uploadProfilePicture(it) }
+    LaunchedEffect(userId) {
+        viewModel.loadUserProfile(userId)
     }
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Profile") },
+                title = { Text(uiState.username) },
                 navigationIcon = {
                     IconButton(onClick = { navController.popBackStack() }) {
                         Icon(Icons.Default.ArrowBack, contentDescription = "Back")
@@ -119,18 +108,10 @@ fun ProfileScreen(
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold
                     )
-
-                    Spacer(modifier = Modifier.height(4.dp))
-
-                    Text(
-                        text = uiState.email + " (only visible to you)",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
                 }
             }
 
-            // ⬇️ UPDATED — Stats below username & email (with Following + clickable)
+            // Stats Row
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -173,18 +154,36 @@ fun ProfileScreen(
                 Spacer(modifier = Modifier.height(12.dp))
             }
 
-            // Edit Profile Button
+            // Follow/Unfollow Button
             Button(
-                onClick = { navController.navigate("editprofile") },
+                onClick = {
+                    if (uiState.isFollowing) {
+                        viewModel.unfollowUser()
+                    } else {
+                        viewModel.followUser()
+                    }
+                },
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 16.dp),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = MaterialTheme.colorScheme.secondaryContainer,
-                    contentColor = MaterialTheme.colorScheme.onSecondaryContainer
-                )
+                colors = if (uiState.isFollowing) {
+                    ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                        contentColor = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                } else {
+                    ButtonDefaults.buttonColors()
+                },
+                enabled = !uiState.isFollowActionLoading
             ) {
-                Text("Edit Profile")
+                if (uiState.isFollowActionLoading) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(20.dp),
+                        color = MaterialTheme.colorScheme.onPrimary
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                }
+                Text(if (uiState.isFollowing) "Unfollow" else "Follow")
             }
 
             Spacer(modifier = Modifier.height(16.dp))
@@ -193,7 +192,7 @@ fun ProfileScreen(
 
             Spacer(modifier = Modifier.height(8.dp))
 
-            // Posts Section Header
+            // Posts Section
             Text(
                 text = "Posts",
                 style = MaterialTheme.typography.titleMedium,
@@ -203,34 +202,19 @@ fun ProfileScreen(
 
             // Posts Grid
             if (uiState.userPosts.isEmpty()) {
-                // Empty state
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(32.dp),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    Icon(
-                        Icons.Default.Add,
-                        contentDescription = null,
-                        modifier = Modifier.size(64.dp),
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f)
-                    )
-                    Spacer(modifier = Modifier.height(16.dp))
                     Text(
                         text = "No posts yet",
                         style = MaterialTheme.typography.bodyLarge,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Text(
-                        text = "Share your first post!",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
-                    )
                 }
             } else {
-                // Grid of posts (3 columns) - showing post images
                 Column(modifier = Modifier.padding(horizontal = 4.dp)) {
                     val rows = uiState.userPosts.chunked(3)
                     rows.forEach { rowPosts ->
@@ -249,7 +233,6 @@ fun ProfileScreen(
                                         .background(MaterialTheme.colorScheme.surfaceVariant)
                                         .clickable { /* TODO: Navigate to post detail */ }
                                 ) {
-                                    // Display post image if available, otherwise show placeholder
                                     if (post.imageUrl != null) {
                                         AsyncImage(
                                             model = post.imageUrl,
@@ -258,7 +241,6 @@ fun ProfileScreen(
                                             contentScale = ContentScale.Crop
                                         )
                                     } else {
-                                        // Text-only post placeholder
                                         Box(
                                             modifier = Modifier
                                                 .fillMaxSize()
@@ -275,7 +257,6 @@ fun ProfileScreen(
                                     }
                                 }
                             }
-                            // Fill remaining slots with empty boxes
                             repeat(3 - rowPosts.size) {
                                 Spacer(modifier = Modifier.weight(1f))
                             }
@@ -307,52 +288,7 @@ fun ProfileScreen(
                 }
             }
         }
-
-        // ✅ Followers Dialog
-        if (uiState.showFollowersDialog) {
-            FollowersDialog(
-                followers = uiState.followers,
-                isLoading = uiState.isLoadingFollowers,
-                onDismiss = { viewModel.hideFollowersDialog() },
-                onUserClick = { userId ->
-                    navController.navigate("other_profile/$userId")
-                }
-            )
-        }
-
-        // ✅ Following Dialog
-        if (uiState.showFollowingDialog) {
-            FollowingDialog(
-                following = uiState.following,
-                isLoading = uiState.isLoadingFollowing,
-                onDismiss = { viewModel.hideFollowingDialog() },
-                onUserClick = { userId ->
-                    navController.navigate("other_profile/$userId")
-                }
-            )
-        }
     }
 }
 
-@Composable
-fun StatItem(
-    count: Int,
-    label: String,
-    modifier: Modifier = Modifier  // ✅ Added modifier parameter
-) {
-    Column(
-        horizontalAlignment = Alignment.CenterHorizontally,
-        modifier = modifier  // ✅ Applied modifier
-    ) {
-        Text(
-            text = count.toString(),
-            style = MaterialTheme.typography.titleLarge,
-            fontWeight = FontWeight.Bold
-        )
-        Text(
-            text = label,
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-    }
-}
+// ✅ StatItem removed - using the one from ProfileScreen.kt

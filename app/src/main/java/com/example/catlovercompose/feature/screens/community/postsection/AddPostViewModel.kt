@@ -25,6 +25,14 @@ class AddPostViewModel @Inject constructor(
     /**
      * Update post content text
      */
+
+    fun updateTitle(title: String) {
+        _state.value = _state.value.copy(
+            title = title,
+            error = null
+        )
+    }
+
     fun updateContent(content: String) {
         _state.value = _state.value.copy(
             content = content,
@@ -54,6 +62,7 @@ class AddPostViewModel @Inject constructor(
      */
     fun createPost(onSuccess: () -> Unit) {
         val content = _state.value.content.trim()
+        val title = _state.value.title.trim()
         val imageUri = _state.value.imageUri
 
         // Validation
@@ -77,6 +86,7 @@ class AddPostViewModel @Inject constructor(
             postRepository.createPost(
                 userId = currentUserId,
                 content = content,
+                title = title,
                 imageUri = imageUri
             )
                 .onSuccess { postId ->
@@ -104,6 +114,7 @@ class AddPostViewModel @Inject constructor(
 
 data class AddPostState(
     val content: String = "",
+    val title: String = "",
     val imageUri: Uri? = null,
     val isPosting: Boolean = false,
     val error: String? = null

@@ -243,4 +243,72 @@ class EventRepository @Inject constructor(
             Result.failure(e)
         }
     }
+
+    /**
+     * Update an existing event (only by creator or admin)
+     */
+    suspend fun updateEvent(
+        eventId: String,
+        userId: String,
+        title: String,
+        description: String,
+        imageUri: Uri?,
+        startDate: Long,
+        endDate: Long
+    ): Result<Unit> {
+        return try {
+            val eventRef = eventsCollection.document(eventId)
+            val eventSnapshot = eventRef.get().await()
+            val event = eventSnapshot.toObject(Event::class.java)
+
+            if (event == null) {
+                return Result.failure(Exception("Event not found"))
+            }
+
+            // Check if user is the creator
+            if (event.createdBy != userId) {
+                // Check if user is admin
+                val isAdmin = userRepository.isAdmin(userId)
+                if (!isAdmin) {
+                    return Result.failure(Exception("Unauthorized: Only event creator or admin can edit"))
+                }
+            }
+
+            // Prepare update data
+            val updates = hashMapOf<String, Any>(
+                "title" to title,
+                "description" to description,
+                "startDate" to startDate,
+                "endDate" to endDate,
+                "updatedAt" to System.currentTimeMillis()
+            )
+
+            // Upload new image if provided
+            if (imageUri != null) {
+                // Delete old image from Storage if exists
+                event.imageUrl?.let { oldImageUrl ->
+                    try {
+                        val oldImageRef = storage.getReferenceFromUrl(oldImageUrl)
+                        oldImageRef.delete().await()
+                    } catch (e: Exception) {
+                        Log.w("EventRepository", "Could not delete old image: ${e.message}")
+                    }
+                }
+
+                // Upload new image
+                val newImageUrl = uploadEventImage(imageUri).getOrThrow()
+                updates["imageUrl"] = newImageUrl
+            }
+            // If imageUri is null, we keep the existing imageUrl in Firestore
+
+            // Update the event
+            eventRef.update(updates).await()
+
+            Log.d("EventRepository", "Event updated successfully: $eventId")
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Log.e("EventRepository", "Error updating event: ${e.message}")
+            Result.failure(e)
+        }
+    }
 }

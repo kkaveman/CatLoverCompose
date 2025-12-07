@@ -16,6 +16,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
@@ -109,6 +110,17 @@ fun PostCard(
                 }
             }
 
+            if (post.title.isNotBlank()) {
+                Spacer(modifier = Modifier.height(17.dp))
+                Text(
+                    text = post.title,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 23.sp,
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+            }
+
             // Post Content
             if (post.content.isNotBlank()) {
                 Spacer(modifier = Modifier.height(12.dp))
@@ -193,5 +205,32 @@ fun formatPostTime(timestamp: Long): String {
         diff < 86400_000 -> "${diff / 3600_000}h ago"
         diff < 604800_000 -> "${diff / 86400_000}d ago"
         else -> SimpleDateFormat("MMM dd, yyyy", Locale.getDefault()).format(Date(timestamp))
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+fun PostCardPreview_WithTitle() {
+    MaterialTheme {
+        PostCard(
+            post = Post(
+                id = "4",
+                userId = "user789",
+                authorName = "Cat Lover",
+                authorProfileUrl = null,
+                title = "Best Cat Food Recommendations",
+                content = "After trying many brands, I finally found the perfect food for my picky eater. Here are my top 3 picks...",
+                imageUrl = null,
+                likeCount = 67,
+                commentCount = 45,
+                likedBy = listOf("user123"),
+                createdAt = System.currentTimeMillis() - 7200_000 // 2 hours ago
+            ),
+            currentUserId = "user123",
+            isLiked = true,
+            onLikeClick = {},
+            onCommentClick = {},
+            onDeleteClick = {}
+        )
     }
 }

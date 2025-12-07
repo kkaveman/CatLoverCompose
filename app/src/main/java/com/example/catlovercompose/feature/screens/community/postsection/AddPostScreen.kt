@@ -76,6 +76,22 @@ fun AddPostScreen(
                 .verticalScroll(rememberScrollState())
                 .padding(16.dp)
         ) {
+
+            OutlinedTextField(
+                value = uiState.title,
+                onValueChange = { viewModel.updateTitle(it) },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(min = 30.dp),
+                placeholder = { Text("Post Title") },
+                maxLines = 10,
+                supportingText = {
+                    Text("${uiState.title.length}/100")
+                },
+                isError = uiState.title.length > 100
+            )
+            Spacer(modifier = Modifier.height(16.dp))
+
             // Text Input
             OutlinedTextField(
                 value = uiState.content,

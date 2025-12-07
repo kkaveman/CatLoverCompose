@@ -30,6 +30,7 @@ class PostRepository @Inject constructor(
      */
     suspend fun createPost(
         userId: String,
+        title : String,
         content: String,
         imageUri: Uri?
     ): Result<String> {
@@ -48,6 +49,7 @@ class PostRepository @Inject constructor(
                 userId = userId,
                 authorName = userProfile.username,
                 authorProfileUrl = userProfile.profileImageUrl,
+                title = title,
                 content = content,
                 imageUrl = imageUrl,
                 likeCount = 0,
@@ -144,21 +146,14 @@ class PostRepository @Inject constructor(
         return try {
             val postRef = postsCollection.document(postId)
 
-            firestore.runTransaction { transaction ->
-                val snapshot = transaction.get(postRef)
-                val post = snapshot.toObject(Post::class.java)
-
-                if (post != null && !post.likedBy.contains(userId)) {
-                    val updatedLikedBy = post.likedBy + userId
-                    transaction.update(
-                        postRef,
-                        mapOf(
-                            "likedBy" to updatedLikedBy,
-                            "likeCount" to updatedLikedBy.size
-                        )
-                    )
-                }
-            }.await()
+            // ✅ FIXED: Use FieldValue operations instead of transaction
+            postRef.update(
+                mapOf(
+                    "likedBy" to com.google.firebase.firestore.FieldValue.arrayUnion(userId),
+                    "likeCount" to com.google.firebase.firestore.FieldValue.increment(1),
+                    "updatedAt" to System.currentTimeMillis()
+                )
+            ).await()
 
             Log.d("PostRepository", "Post liked: $postId")
             Result.success(Unit)
@@ -175,21 +170,14 @@ class PostRepository @Inject constructor(
         return try {
             val postRef = postsCollection.document(postId)
 
-            firestore.runTransaction { transaction ->
-                val snapshot = transaction.get(postRef)
-                val post = snapshot.toObject(Post::class.java)
-
-                if (post != null && post.likedBy.contains(userId)) {
-                    val updatedLikedBy = post.likedBy - userId
-                    transaction.update(
-                        postRef,
-                        mapOf(
-                            "likedBy" to updatedLikedBy,
-                            "likeCount" to updatedLikedBy.size
-                        )
-                    )
-                }
-            }.await()
+            // ✅ FIXED: Use FieldValue operations instead of transaction
+            postRef.update(
+                mapOf(
+                    "likedBy" to com.google.firebase.firestore.FieldValue.arrayRemove(userId),
+                    "likeCount" to com.google.firebase.firestore.FieldValue.increment(-1),
+                    "updatedAt" to System.currentTimeMillis()
+                )
+            ).await()
 
             Log.d("PostRepository", "Post unliked: $postId")
             Result.success(Unit)
@@ -198,7 +186,6 @@ class PostRepository @Inject constructor(
             Result.failure(e)
         }
     }
-
     /**
      * Delete a post (only by owner)
      */

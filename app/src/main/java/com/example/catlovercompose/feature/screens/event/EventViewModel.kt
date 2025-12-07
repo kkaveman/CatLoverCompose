@@ -10,6 +10,7 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.CancellationException  // ✅ ADD THIS
 import javax.inject.Inject
 
 @HiltViewModel
@@ -53,6 +54,10 @@ class EventViewModel @Inject constructor(
                     )
                     Log.d("EventViewModel", "Loaded ${events.size} events")
                 }
+            } catch (e: CancellationException) {
+                // ✅ ADD THIS: Don't log cancellation as error - it's expected
+                Log.d("EventViewModel", "Event loading cancelled (navigation)")
+                throw e // Re-throw to properly cancel the coroutine
             } catch (e: Exception) {
                 Log.e("EventViewModel", "Error loading events: ${e.message}")
                 _state.value = _state.value.copy(
@@ -75,28 +80,35 @@ class EventViewModel @Inject constructor(
         }
 
         viewModelScope.launch {
-            if (isCurrentlyJoined) {
-                eventRepository.leaveEvent(eventId, currentUserId)
-                    .onSuccess {
-                        Log.d("EventViewModel", "Left event: $eventId")
-                    }
-                    .onFailure { e ->
-                        Log.e("EventViewModel", "Error leaving event: ${e.message}")
-                        _state.value = _state.value.copy(
-                            error = "Failed to leave event"
-                        )
-                    }
-            } else {
-                eventRepository.joinEvent(eventId, currentUserId)
-                    .onSuccess {
-                        Log.d("EventViewModel", "Joined event: $eventId")
-                    }
-                    .onFailure { e ->
-                        Log.e("EventViewModel", "Error joining event: ${e.message}")
-                        _state.value = _state.value.copy(
-                            error = "Failed to join event"
-                        )
-                    }
+            try {  // ✅ ADD TRY-CATCH HERE TOO
+                if (isCurrentlyJoined) {
+                    eventRepository.leaveEvent(eventId, currentUserId)
+                        .onSuccess {
+                            Log.d("EventViewModel", "Left event: $eventId")
+                        }
+                        .onFailure { e ->
+                            Log.e("EventViewModel", "Error leaving event: ${e.message}")
+                            _state.value = _state.value.copy(
+                                error = "Failed to leave event"
+                            )
+                        }
+                } else {
+                    eventRepository.joinEvent(eventId, currentUserId)
+                        .onSuccess {
+                            Log.d("EventViewModel", "Joined event: $eventId")
+                        }
+                        .onFailure { e ->
+                            Log.e("EventViewModel", "Error joining event: ${e.message}")
+                            _state.value = _state.value.copy(
+                                error = "Failed to join event"
+                            )
+                        }
+                }
+            } catch (e: CancellationException) {
+                Log.d("EventViewModel", "Join/leave cancelled")
+                throw e
+            } catch (e: Exception) {
+                Log.e("EventViewModel", "Unexpected error: ${e.message}")
             }
         }
     }

@@ -63,6 +63,9 @@ class SignUpViewModel @Inject constructor(
                 role = 0,
                 postCount = 0,
 
+                // ✅ NEW: Initialize follower counts
+                followerCount = 0,
+                followingCount = 0
             )
 
             userRepository.createUserProfile(userProfile)

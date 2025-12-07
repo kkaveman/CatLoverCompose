@@ -82,6 +82,33 @@ class UserRepository @Inject constructor() {
         }
     }
 
+    suspend fun searchUsersByUsername(query: String): Result<List<UserProfile>> {
+        return try {
+            if (query.isBlank()) {
+                return Result.success(emptyList())
+            }
+
+            // Firestore doesn't support case-insensitive queries directly
+            // So we fetch and filter on client side
+            // For better performance, consider using Algolia or storing lowercase username field
+            val snapshot = usersCollection
+                .orderBy("username")
+                .startAt(query)
+                .endAt(query + "\uf8ff")
+                .limit(20)
+                .get()
+                .await()
+
+            val users = snapshot.documents.mapNotNull { doc ->
+                doc.toObject(UserProfile::class.java)
+            }
+
+            Result.success(users)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
     /**
      * Delete profile picture from Storage (optional, for cleanup)
      */
@@ -110,4 +137,7 @@ class UserRepository @Inject constructor() {
             false
         }
     }
+
+
 }
+

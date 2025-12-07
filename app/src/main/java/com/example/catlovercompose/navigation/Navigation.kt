@@ -14,6 +14,7 @@ import com.example.catlovercompose.feature.auth.signup.SignUpScreen
 
 import com.example.catlovercompose.feature.profile.ProfileScreen
 import com.example.catlovercompose.feature.profile.EditProfileScreen
+import com.example.catlovercompose.feature.profile.OtherProfileScreen
 import com.example.catlovercompose.feature.screens.admin.AdminScreen
 import com.example.catlovercompose.feature.screens.settings.SettingsScreen
 
@@ -62,6 +63,12 @@ fun AppNavigation() {
         // Channel/Message list screen
         composable(NavDestinations.Channel.route) {
             ChannelScreen(navController)
+        }
+
+        composable("${NavDestinations.OtherProfile.route}/{userId}"){ backStackEntry ->
+            val userId = backStackEntry.arguments?.getString("userId") ?: ""
+            OtherProfileScreen(navController, userId)
+
         }
 
         composable(NavDestinations.AddPost.route) {

@@ -14,6 +14,8 @@ sealed class NavDestinations(val route: String) {
     object Screening : NavDestinations("screening")
 
     object FindUser : NavDestinations("finduser")
+    object OtherProfile : NavDestinations("otherprofile")
+
 
     object Profile : NavDestinations("profile")
 

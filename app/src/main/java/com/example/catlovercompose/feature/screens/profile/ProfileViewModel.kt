@@ -5,7 +5,9 @@ import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.navigation.NavController
+import com.example.catlovercompose.core.model.Follower
 import com.example.catlovercompose.core.model.Post
+import com.example.catlovercompose.core.repository.FollowerRepository
 import com.example.catlovercompose.core.repository.PostRepository
 import com.example.catlovercompose.core.repository.UserRepository
 import com.example.catlovercompose.core.util.AuthState
@@ -20,7 +22,8 @@ import javax.inject.Inject
 @HiltViewModel
 class ProfileViewModel @Inject constructor(
     private val userRepository: UserRepository,
-    private val postRepository: PostRepository
+    private val postRepository: PostRepository,
+    private val followerRepository: FollowerRepository  // ✅ Added
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(ProfileState())
@@ -37,7 +40,7 @@ class ProfileViewModel @Inject constructor(
         viewModelScope.launch {
             _state.value = _state.value.copy(isLoading = true)
 
-            // Now load from Firestore
+            // Load from Firestore
             userRepository.getUserProfile(user.uid)
                 .onSuccess { profile ->
                     _state.value = _state.value.copy(
@@ -48,6 +51,11 @@ class ProfileViewModel @Inject constructor(
                         age = profile?.age,
                         gender = profile?.gender ?: 2,
                         postCount = profile?.postCount ?: 0,
+
+                        // ✅ Added follower/following counts
+                        followerCount = profile?.followerCount ?: 0,
+                        followingCount = profile?.followingCount ?: 0,
+
                         isLoading = false
                     )
                 }
@@ -62,6 +70,11 @@ class ProfileViewModel @Inject constructor(
                         age = null,
                         gender = 2,
                         postCount = 0,
+
+                        // ✅ Added fallback for follower/following counts
+                        followerCount = 0,
+                        followingCount = 0,
+
                         isLoading = false,
                         error = "Failed to load profile"
                     )
@@ -151,6 +164,54 @@ class ProfileViewModel @Inject constructor(
         }
     }
 
+    // ✅ NEW: Show Followers Dialog
+    fun showFollowersDialog() {
+        val user = AuthState.getCurrentUser() ?: return
+
+        viewModelScope.launch {
+            _state.value = _state.value.copy(
+                showFollowersDialog = true,
+                isLoadingFollowers = true
+            )
+
+            followerRepository.getFollowers(user.uid).collect { followers ->
+                _state.value = _state.value.copy(
+                    followers = followers,
+                    isLoadingFollowers = false
+                )
+            }
+        }
+    }
+
+    // ✅ NEW: Hide Followers Dialog
+    fun hideFollowersDialog() {
+        _state.value = _state.value.copy(showFollowersDialog = false)
+    }
+
+    // ✅ NEW: Show Following Dialog
+    fun showFollowingDialog() {
+        val user = AuthState.getCurrentUser() ?: return
+
+        viewModelScope.launch {
+            _state.value = _state.value.copy(
+                showFollowingDialog = true,
+                isLoadingFollowing = true
+            )
+
+            followerRepository.getFollowing(user.uid).collect { following ->
+                _state.value = _state.value.copy(
+                    following = following,
+                    isLoadingFollowing = false
+                )
+            }
+        }
+    }
+
+    // ✅ NEW: Hide Following Dialog
+    fun hideFollowingDialog() {
+        _state.value = _state.value.copy(showFollowingDialog = false)
+    }
+
     fun signOut(navController: NavController) {
         AuthState.signOut()
         navController.navigate(NavDestinations.SignIn.route) {
@@ -167,6 +228,17 @@ data class ProfileState(
     val age: Int? = null,
     val gender: Int = 2, // 0=male, 1=female, 2=other
     val postCount: Int = 0,
+
+    // ✅ NEW: Follower/Following fields
+    val followerCount: Int = 0,
+    val followingCount: Int = 0,
+    val followers: List<Follower> = emptyList(),
+    val following: List<Follower> = emptyList(),
+    val showFollowersDialog: Boolean = false,
+    val showFollowingDialog: Boolean = false,
+    val isLoadingFollowers: Boolean = false,
+    val isLoadingFollowing: Boolean = false,
+
     val userPosts: List<Post> = emptyList(),
     val isLoading: Boolean = false,
     val isUploadingImage: Boolean = false,
