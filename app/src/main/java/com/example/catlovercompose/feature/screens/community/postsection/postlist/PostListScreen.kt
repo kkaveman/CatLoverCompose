@@ -22,8 +22,8 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import com.example.catlovercompose.core.util.AuthState
 import com.example.catlovercompose.feature.screens.community.postsection.PostCard
-
 @Composable
+
 fun PostListScreen(
     navController: NavController,
     viewModel: PostListViewModel = hiltViewModel()

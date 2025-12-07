@@ -14,6 +14,7 @@ data class UserProfile(
     val gender: Int = 2, // 0=male, 1=female, 2=other/unspecified
     val role: Int = 0, // 0=user, 1=admin
     val postCount : Int = 0,
+
 //    val followers: Int = 0,
 //
     val createdAt: Long = System.currentTimeMillis(),

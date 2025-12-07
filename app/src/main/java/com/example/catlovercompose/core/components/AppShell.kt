@@ -24,7 +24,9 @@ import com.example.catlovercompose.feature.screens.screening.ScreeningScreen
 import com.example.catlovercompose.feature.screens.finduser.FindUserScreen
 
 import com.example.catlovercompose.feature.screens.admin.AdminScreen
+import com.example.catlovercompose.feature.screens.admin.eventcrud.EventCRUDScreen
 import com.example.catlovercompose.feature.screens.community.postsection.AddPostScreen
+import com.example.catlovercompose.feature.screens.event.SingleEventScreen
 
 import com.example.catlovercompose.feature.screens.settings.SettingsScreen
 import com.example.catlovercompose.navigation.NavDestinations
@@ -55,6 +57,9 @@ fun AppShell(mainNavController: NavController) {
     val navBackStackEntry by shellNavController.currentBackStackEntryAsState()
     val currentDestination = navBackStackEntry?.destination
 
+    // Check if current route is SingleEventScreen
+    val currentRoute = currentDestination?.route
+    val isSingleEventScreen = currentRoute?.startsWith("${NavDestinations.SingleEvent.route}/") == true
 
     val bottomNavItems = listOf(
         BottomNavItem.Home,
@@ -96,43 +101,51 @@ fun AppShell(mainNavController: NavController) {
                     }
                 )
             }
-        }
+        },
+        // Disable drawer on SingleEventScreen
+        gesturesEnabled = !isSingleEventScreen
     ) {
         Scaffold(
             topBar = {
-                TopAppBar(
-                    title = { Text("Cat Lover") },
-                    navigationIcon = {
-                        IconButton(onClick = { scope.launch { drawerState.open() } }) {
-                            Icon(Icons.Default.Menu, contentDescription = "Menu")
-                        }
-                    },
-
-                    actions = {
-                        // Only show email icon if user is signed in
-                        if (AuthState.isUserSignedIn()) {
-                            IconButton(onClick = { mainNavController.navigate(NavDestinations.Channel.route) }) {
-                                Icon(Icons.Default.Email, contentDescription = "Chat")
+                // Hide top bar on SingleEventScreen
+                if (!isSingleEventScreen) {
+                    TopAppBar(
+                        title = { Text("Cat Lover") },
+                        navigationIcon = {
+                            IconButton(onClick = { scope.launch { drawerState.open() } }) {
+                                Icon(Icons.Default.Menu, contentDescription = "Menu")
                             }
-                        }
-                    }
-                )
-            },
-            bottomBar = {
-                NavigationBar {
-                    bottomNavItems.forEach { item ->
-                        NavigationBarItem(
-                            icon = { Icon(item.icon, contentDescription = item.label) },
-                            label = { Text(item.label) },
-                            selected = currentDestination?.hierarchy?.any { it.route == item.route } == true,
-                            onClick = {
-                                shellNavController.navigate(item.route) {
-                                    popUpTo(NavDestinations.Home.route) { saveState = true }
-                                    launchSingleTop = true
-                                    restoreState = true
+                        },
+
+                        actions = {
+                            // Only show email icon if user is signed in
+                            if (AuthState.isUserSignedIn()) {
+                                IconButton(onClick = { mainNavController.navigate(NavDestinations.Channel.route) }) {
+                                    Icon(Icons.Default.Email, contentDescription = "Chat")
                                 }
                             }
-                        )
+                        }
+                    )
+                }
+            },
+            bottomBar = {
+                // Hide bottom bar on SingleEventScreen
+                if (!isSingleEventScreen) {
+                    NavigationBar {
+                        bottomNavItems.forEach { item ->
+                            NavigationBarItem(
+                                icon = { Icon(item.icon, contentDescription = item.label) },
+                                label = { Text(item.label) },
+                                selected = currentDestination?.hierarchy?.any { it.route == item.route } == true,
+                                onClick = {
+                                    shellNavController.navigate(item.route) {
+                                        popUpTo(NavDestinations.Home.route) { saveState = true }
+                                        launchSingleTop = true
+                                        restoreState = true
+                                    }
+                                }
+                            )
+                        }
                     }
                 }
             }
@@ -140,13 +153,24 @@ fun AppShell(mainNavController: NavController) {
             NavHost(
                 navController = shellNavController,
                 startDestination = NavDestinations.Home.route,
-                modifier = Modifier.padding(paddingValues)
+                modifier = Modifier.padding(
+                    // Don't apply padding on SingleEventScreen so it can be edge-to-edge
+                    if (isSingleEventScreen) PaddingValues(0.dp) else paddingValues
+                )
             ) {
                 composable(NavDestinations.Home.route) {
                     HomeScreen(mainNavController)
                 }
                 composable(NavDestinations.Event.route) {
-                    EventScreen()
+                    EventScreen(shellNavController)
+                }
+                // Inside AppShell NavHost, after AddPost composable:
+                composable("${NavDestinations.SingleEvent.route}/{eventId}") { backStackEntry ->
+                    val eventId = backStackEntry.arguments?.getString("eventId") ?: ""
+                    SingleEventScreen(
+                        navController = shellNavController,
+                        eventId = eventId
+                    )
                 }
                 composable(NavDestinations.Community.route) {
                     CommunityScreen(mainNavController)
@@ -171,6 +195,8 @@ fun AppShell(mainNavController: NavController) {
                 composable(NavDestinations.Admin.route) {
                     AdminScreen(mainNavController)
                 }
+
+
             }
         }
     }
@@ -254,4 +280,3 @@ fun DrawerContent(
         )
     }
 }
-

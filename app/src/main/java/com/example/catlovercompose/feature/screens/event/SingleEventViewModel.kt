@@ -1,4 +1,4 @@
-package com.example.catlovercompose.feature.event
+package com.example.catlovercompose.feature.screens.event
 
 import android.util.Log
 import androidx.lifecycle.ViewModel
@@ -13,75 +13,69 @@ import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 @HiltViewModel
-class EventViewModel @Inject constructor(
+class SingleEventViewModel @Inject constructor(
     private val eventRepository: EventRepository
 ) : ViewModel() {
 
-    private val _state = MutableStateFlow(EventState())
+    private val _state = MutableStateFlow(SingleEventState())
     val state = _state.asStateFlow()
 
     private val currentUserId = AuthState.getCurrentUser()?.uid ?: ""
 
-    init {
-        loadEvents()
-    }
-
-    /**
-     * Load all events from Firestore (real-time)
-     */
-    private fun loadEvents() {
+    fun loadEvent(eventId: String) {
         viewModelScope.launch {
             _state.value = _state.value.copy(isLoading = true)
 
-            try {
-                eventRepository.getAllEvents().collect { events ->
+            eventRepository.getEvent(eventId)
+                .onSuccess { event ->
                     _state.value = _state.value.copy(
-                        events = events,
+                        event = event,
                         isLoading = false
                     )
-                    Log.d("EventViewModel", "Loaded ${events.size} events")
                 }
-            } catch (e: Exception) {
-                Log.e("EventViewModel", "Error loading events: ${e.message}")
-                _state.value = _state.value.copy(
-                    isLoading = false,
-                    error = "Failed to load events"
-                )
-            }
+                .onFailure { e ->
+                    Log.e("SingleEventViewModel", "Error loading event: ${e.message}")
+                    _state.value = _state.value.copy(
+                        isLoading = false,
+                        error = "Failed to load event"
+                    )
+                }
         }
     }
 
-    /**
-     * Toggle join/leave event
-     */
-    fun toggleJoinEvent(eventId: String, isCurrentlyJoined: Boolean) {
+    fun toggleJoinEvent() {
+        val event = _state.value.event ?: return
+        val isJoined = event.participants.contains(currentUserId)
+
         if (currentUserId.isEmpty()) {
-            _state.value = _state.value.copy(
-                error = "Please sign in to join events"
-            )
+            _state.value = _state.value.copy(error = "Please sign in to join events")
             return
         }
 
         viewModelScope.launch {
-            if (isCurrentlyJoined) {
-                eventRepository.leaveEvent(eventId, currentUserId)
+            _state.value = _state.value.copy(isJoining = true)
+
+            if (isJoined) {
+                eventRepository.leaveEvent(event.id, currentUserId)
                     .onSuccess {
-                        Log.d("EventViewModel", "Left event: $eventId")
+                        _state.value = _state.value.copy(isJoining = false)
+                        Log.d("SingleEventViewModel", "Left event")
                     }
                     .onFailure { e ->
-                        Log.e("EventViewModel", "Error leaving event: ${e.message}")
                         _state.value = _state.value.copy(
+                            isJoining = false,
                             error = "Failed to leave event"
                         )
                     }
             } else {
-                eventRepository.joinEvent(eventId, currentUserId)
+                eventRepository.joinEvent(event.id, currentUserId)
                     .onSuccess {
-                        Log.d("EventViewModel", "Joined event: $eventId")
+                        _state.value = _state.value.copy(isJoining = false)
+                        Log.d("SingleEventViewModel", "Joined event")
                     }
                     .onFailure { e ->
-                        Log.e("EventViewModel", "Error joining event: ${e.message}")
                         _state.value = _state.value.copy(
+                            isJoining = false,
                             error = "Failed to join event"
                         )
                     }
@@ -89,26 +83,17 @@ class EventViewModel @Inject constructor(
         }
     }
 
-    /**
-     * Clear error message
-     */
     fun clearError() {
         _state.value = _state.value.copy(error = null)
     }
 
-    /**
-     * Get current user ID
-     */
     fun getCurrentUserId(): String = currentUserId
-
-    /**
-     * Check if user is signed in
-     */
     fun isUserSignedIn(): Boolean = currentUserId.isNotEmpty()
 }
 
-data class EventState(
-    val events: List<Event> = emptyList(),
+data class SingleEventState(
+    val event: Event? = null,
     val isLoading: Boolean = false,
+    val isJoining: Boolean = false,
     val error: String? = null
 )

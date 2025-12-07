@@ -25,9 +25,13 @@ sealed class NavDestinations(val route: String) {
     object AppShell : NavDestinations("app_shell")
 
     object Admin : NavDestinations("admin")
+    object EventCRUD : NavDestinations("eventcrud")
 
     object Channel : NavDestinations("channel")
     object Chat : NavDestinations("chat") // chat/{channelId}
 
     object AddPost : NavDestinations("addpost")
+
+
+    object SingleEvent : NavDestinations("singleevent") // singleevent/{eventId}
 }
