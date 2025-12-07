@@ -27,9 +27,12 @@ import java.util.*
 @Composable
 fun EventCard(
     event: Event,
+    currentUserId: String,
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val isJoined = event.participants.contains(currentUserId)
+
     Card(
         modifier = modifier
             .fillMaxWidth()
@@ -52,29 +55,61 @@ fun EventCard(
                         contentScale = ContentScale.Crop
                     )
 
-                    // Status badge
-                    Surface(
+                    // Status badges row
+                    Row(
                         modifier = Modifier
                             .align(Alignment.TopEnd)
                             .padding(12.dp),
-                        color = when {
-                            event.hasEnded() -> Color.Gray
-                            event.isOngoing() -> Color(0xFF4CAF50)
-                            else -> Color(0xFF2196F3)
-                        },
-                        shape = RoundedCornerShape(16.dp)
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        Text(
-                            text = when {
-                                event.hasEnded() -> "Ended"
-                                event.isOngoing() -> "Ongoing"
-                                else -> "Upcoming"
+                        // Status badge
+                        Surface(
+                            color = when {
+                                event.hasEnded() -> Color.Gray
+                                event.isOngoing() -> Color(0xFF4CAF50)
+                                else -> Color(0xFF2196F3)
                             },
-                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
-                            color = Color.White,
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.Bold
-                        )
+                            shape = RoundedCornerShape(16.dp)
+                        ) {
+                            Text(
+                                text = when {
+                                    event.hasEnded() -> "Ended"
+                                    event.isOngoing() -> "Ongoing"
+                                    else -> "Upcoming"
+                                },
+                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                                color = Color.White,
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+
+                        // Joined badge
+                        if (isJoined) {
+                            Surface(
+                                color = Color(0xFFFF9800), // Orange color
+                                shape = RoundedCornerShape(16.dp)
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                ) {
+                                    Icon(
+                                        Icons.Default.Check,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(14.dp),
+                                        tint = Color.White
+                                    )
+                                    Text(
+                                        text = "Joined",
+                                        color = Color.White,
+                                        fontSize = 12.sp,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                }
+                            }
+                        }
                     }
                 }
             } else {

@@ -19,6 +19,10 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import com.example.catlovercompose.feature.screens.event.EventCard
 
+enum class EventFilter {
+    ALL, JOINED
+}
+
 @Composable
 fun EventScreen(
     navController: NavController,
@@ -26,6 +30,15 @@ fun EventScreen(
 ) {
     val uiState by viewModel.state.collectAsState()
     val context = LocalContext.current
+    var selectedFilter by remember { mutableStateOf(EventFilter.ALL) }
+
+    // Filter events based on selection
+    val filteredEvents = when (selectedFilter) {
+        EventFilter.ALL -> uiState.events
+        EventFilter.JOINED -> uiState.events.filter { event ->
+            event.participants.contains(viewModel.getCurrentUserId())
+        }
+    }
 
     // Show error toast
     LaunchedEffect(uiState.error) {
@@ -35,58 +48,118 @@ fun EventScreen(
         }
     }
 
-    Box(
+    Column(
         modifier = Modifier
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
     ) {
-        if (uiState.isLoading) {
-            CircularProgressIndicator(
-                modifier = Modifier.align(Alignment.Center)
-            )
-        } else if (uiState.events.isEmpty()) {
-            // Empty state
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(32.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.Center
-            ) {
-                Icon(
-                    Icons.Default.DateRange,
-                    contentDescription = null,
-                    modifier = Modifier.size(64.dp),
-                    tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)
-                )
-                Spacer(modifier = Modifier.height(16.dp))
-                Text(
-                    text = "No events available",
-                    fontSize = 24.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                Spacer(modifier = Modifier.height(8.dp))
-                Text(
-                    text = "Check back later for upcoming events!",
-                    fontSize = 16.sp,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
-                )
-            }
-        } else {
-            // Event List
-            LazyColumn(
-                modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(16.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp)
-            ) {
-                items(uiState.events) { event ->
-                    EventCard(
-                        event = event,
-                        onClick = {
-                            navController.navigate("singleevent/${event.id}")
-                        }
+        // Filter Tabs
+        TabRow(
+            selectedTabIndex = selectedFilter.ordinal,
+            containerColor = MaterialTheme.colorScheme.surface,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Tab(
+                selected = selectedFilter == EventFilter.ALL,
+                onClick = { selectedFilter = EventFilter.ALL },
+                text = {
+                    Text(
+                        "All Events",
+                        fontWeight = if (selectedFilter == EventFilter.ALL)
+                            FontWeight.Bold else FontWeight.Normal
                     )
+                }
+            )
+            Tab(
+                selected = selectedFilter == EventFilter.JOINED,
+                onClick = { selectedFilter = EventFilter.JOINED },
+                text = {
+                    Text(
+                        "Joined",
+                        fontWeight = if (selectedFilter == EventFilter.JOINED)
+                            FontWeight.Bold else FontWeight.Normal
+                    )
+                }
+            )
+        }
+
+        // Content
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .weight(1f)
+        ) {
+            if (uiState.isLoading) {
+                CircularProgressIndicator(
+                    modifier = Modifier.align(Alignment.Center)
+                )
+            } else if (filteredEvents.isEmpty()) {
+                // Empty state
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(32.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center
+                ) {
+                    Icon(
+                        Icons.Default.DateRange,
+                        contentDescription = null,
+                        modifier = Modifier.size(64.dp),
+                        tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)
+                    )
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Text(
+                        text = if (selectedFilter == EventFilter.JOINED) {
+                            "No joined events"
+                        } else {
+                            "No events available"
+                        },
+                        fontSize = 24.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = if (selectedFilter == EventFilter.JOINED) {
+                            "Join an event to see it here!"
+                        } else {
+                            "Check back later for upcoming events!"
+                        },
+                        fontSize = 16.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                    )
+                }
+            } else {
+                // Event List
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = PaddingValues(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    // Header with count
+                    item {
+                        Text(
+                            text = if (selectedFilter == EventFilter.JOINED) {
+                                "${filteredEvents.size} Joined Event${if (filteredEvents.size != 1) "s" else ""}"
+                            } else {
+                                "${filteredEvents.size} Event${if (filteredEvents.size != 1) "s" else ""} Available"
+                            },
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+
+                    items(filteredEvents) { event ->
+                        EventCard(
+                            event = event,
+                            currentUserId = viewModel.getCurrentUserId(),
+                            onClick = {
+                                navController.navigate("singleevent/${event.id}")
+                            }
+                        )
+                    }
                 }
             }
         }

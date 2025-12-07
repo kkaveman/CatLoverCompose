@@ -28,6 +28,7 @@ class EventViewModel @Inject constructor(
 
     /**
      * Load all events from Firestore (real-time)
+     * This will automatically update when events change, including participant updates
      */
     private fun loadEvents() {
         viewModelScope.launch {
@@ -35,8 +36,19 @@ class EventViewModel @Inject constructor(
 
             try {
                 eventRepository.getAllEvents().collect { events ->
+                    // Sort events: ongoing first, then upcoming, then ended
+                    val sortedEvents = events.sortedWith(
+                        compareBy<Event> { event ->
+                            when {
+                                event.hasEnded() -> 3
+                                event.isOngoing() -> 1
+                                else -> 2 // upcoming
+                            }
+                        }.thenBy { it.startDate }
+                    )
+
                     _state.value = _state.value.copy(
-                        events = events,
+                        events = sortedEvents,
                         isLoading = false
                     )
                     Log.d("EventViewModel", "Loaded ${events.size} events")
@@ -105,6 +117,15 @@ class EventViewModel @Inject constructor(
      * Check if user is signed in
      */
     fun isUserSignedIn(): Boolean = currentUserId.isNotEmpty()
+
+    /**
+     * Get count of joined events
+     */
+    fun getJoinedEventsCount(): Int {
+        return _state.value.events.count { event ->
+            event.participants.contains(currentUserId)
+        }
+    }
 }
 
 data class EventState(
@@ -112,3 +133,17 @@ data class EventState(
     val isLoading: Boolean = false,
     val error: String? = null
 )
+
+// Extension functions for Event status checking
+private fun Event.hasEnded(): Boolean {
+    return System.currentTimeMillis() > endDate
+}
+
+private fun Event.isOngoing(): Boolean {
+    val now = System.currentTimeMillis()
+    return now in startDate..endDate
+}
+
+private fun Event.isUpcoming(): Boolean {
+    return System.currentTimeMillis() < startDate
+}
