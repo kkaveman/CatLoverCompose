@@ -1,15 +1,13 @@
 package com.example.catlovercompose.feature.profile
 
 import android.net.Uri
+import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.grid.GridCells
-import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -23,16 +21,17 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Dialog
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
-import androidx.navigation.compose.rememberNavController
 import coil.compose.AsyncImage
 import com.example.catlovercompose.feature.profile.follow.FollowersDialog
 import com.example.catlovercompose.feature.profile.follow.FollowingDialog
+import com.example.catlovercompose.navigation.NavDestinations
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -41,12 +40,21 @@ fun ProfileScreen(
     viewModel: ProfileViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.state.collectAsState()
+    val context = LocalContext.current
 
-    // Image picker launcher
+    // Image picker launcher for profile
     val imagePickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
     ) { uri: Uri? ->
         uri?.let { viewModel.uploadProfilePicture(it) }
+    }
+
+    // Show error toast
+    LaunchedEffect(uiState.error) {
+        uiState.error?.let { error ->
+            Toast.makeText(context, error, Toast.LENGTH_SHORT).show()
+            viewModel.clearError()
+        }
     }
 
     Scaffold(
@@ -130,7 +138,7 @@ fun ProfileScreen(
                 }
             }
 
-            // ⬇️ UPDATED — Stats below username & email (with Following + clickable)
+            // Stats Section
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -203,7 +211,6 @@ fun ProfileScreen(
 
             // Posts Grid
             if (uiState.userPosts.isEmpty()) {
-                // Empty state
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -230,7 +237,6 @@ fun ProfileScreen(
                     )
                 }
             } else {
-                // Grid of posts (3 columns) - showing post images
                 Column(modifier = Modifier.padding(horizontal = 4.dp)) {
                     val rows = uiState.userPosts.chunked(3)
                     rows.forEach { rowPosts ->
@@ -247,9 +253,10 @@ fun ProfileScreen(
                                         .aspectRatio(1f)
                                         .clip(RoundedCornerShape(4.dp))
                                         .background(MaterialTheme.colorScheme.surfaceVariant)
-                                        .clickable { /* TODO: Navigate to post detail */ }
+                                        .clickable {
+                                            viewModel.showPostActionModal(post)
+                                        }
                                 ) {
-                                    // Display post image if available, otherwise show placeholder
                                     if (post.imageUrl != null) {
                                         AsyncImage(
                                             model = post.imageUrl,
@@ -258,7 +265,6 @@ fun ProfileScreen(
                                             contentScale = ContentScale.Crop
                                         )
                                     } else {
-                                        // Text-only post placeholder
                                         Box(
                                             modifier = Modifier
                                                 .fillMaxSize()
@@ -275,7 +281,6 @@ fun ProfileScreen(
                                     }
                                 }
                             }
-                            // Fill remaining slots with empty boxes
                             repeat(3 - rowPosts.size) {
                                 Spacer(modifier = Modifier.weight(1f))
                             }
@@ -308,27 +313,65 @@ fun ProfileScreen(
             }
         }
 
-        // ✅ Followers Dialog
+        // Followers Dialog
         if (uiState.showFollowersDialog) {
             FollowersDialog(
                 followers = uiState.followers,
                 isLoading = uiState.isLoadingFollowers,
                 onDismiss = { viewModel.hideFollowersDialog() },
                 onUserClick = { userId ->
-                    navController.navigate("other_profile/$userId")
+                    viewModel.hideFollowersDialog()
+                    navController.navigate("${NavDestinations.OtherProfile.route}/$userId")
                 }
             )
         }
 
-        // ✅ Following Dialog
+        // Following Dialog
         if (uiState.showFollowingDialog) {
             FollowingDialog(
                 following = uiState.following,
                 isLoading = uiState.isLoadingFollowing,
                 onDismiss = { viewModel.hideFollowingDialog() },
                 onUserClick = { userId ->
-                    navController.navigate("other_profile/$userId")
+                    viewModel.hideFollowingDialog()
+                    navController.navigate("${NavDestinations.OtherProfile.route}/$userId")
                 }
+            )
+        }
+
+        // Post Action Modal
+        if (uiState.showPostActionModal && uiState.selectedPost != null) {
+            PostActionModal(
+                post = uiState.selectedPost!!,
+                onEdit = { viewModel.showEditPostDialog() },
+                onDelete = { viewModel.showDeletePostDialog() },
+                onDismiss = { viewModel.hidePostActionModal() }
+            )
+        }
+
+        // ✅ UPDATED: Edit Post Dialog with Image Support
+        if (uiState.showEditPostDialog && uiState.selectedPost != null) {
+            EditPostDialog(
+                title = uiState.editPostTitle,
+                content = uiState.editPostContent,
+                currentImageUrl = uiState.editPostImageUrl,
+                newImageUri = uiState.editPostNewImageUri,
+                isUpdating = uiState.isUpdatingPost,
+                onTitleChange = viewModel::updateEditPostTitle,
+                onContentChange = viewModel::updateEditPostContent,
+                onImageSelected = viewModel::setEditPostImage,
+                onImageRemove = viewModel::removeEditPostImage,
+                onSave = { viewModel.savePostEdit() },
+                onDismiss = { viewModel.hideEditPostDialog() }
+            )
+        }
+
+        // Delete Post Dialog
+        if (uiState.showDeletePostDialog && uiState.selectedPost != null) {
+            DeletePostDialog(
+                isDeleting = uiState.isDeletingPost,
+                onConfirm = { viewModel.deletePost() },
+                onDismiss = { viewModel.hideDeletePostDialog() }
             )
         }
     }
@@ -338,11 +381,11 @@ fun ProfileScreen(
 fun StatItem(
     count: Int,
     label: String,
-    modifier: Modifier = Modifier  // ✅ Added modifier parameter
+    modifier: Modifier = Modifier
 ) {
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
-        modifier = modifier  // ✅ Applied modifier
+        modifier = modifier
     ) {
         Text(
             text = count.toString(),
@@ -355,4 +398,301 @@ fun StatItem(
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
     }
+}
+
+// ==================== DIALOG COMPOSABLES ====================
+
+@Composable
+fun PostActionModal(
+    post: com.example.catlovercompose.core.model.Post,
+    onEdit: () -> Unit,
+    onDelete: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    Dialog(onDismissRequest = onDismiss) {
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            shape = RoundedCornerShape(16.dp)
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(20.dp)
+            ) {
+                Text(
+                    text = "Post Actions",
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold
+                )
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                Button(
+                    onClick = onEdit,
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.primaryContainer,
+                        contentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                    )
+                ) {
+                    Icon(Icons.Default.Edit, contentDescription = null)
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Edit Post")
+                }
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                Button(
+                    onClick = onDelete,
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.errorContainer,
+                        contentColor = MaterialTheme.colorScheme.onErrorContainer
+                    )
+                ) {
+                    Icon(Icons.Default.Delete, contentDescription = null)
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Delete Post")
+                }
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                TextButton(
+                    onClick = onDismiss,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text("Cancel")
+                }
+            }
+        }
+    }
+}
+
+// ✅ UPDATED: Edit Post Dialog with Image Support
+@Composable
+fun EditPostDialog(
+    title: String,
+    content: String,
+    currentImageUrl: String?,
+    newImageUri: Uri?,
+    isUpdating: Boolean,
+    onTitleChange: (String) -> Unit,
+    onContentChange: (String) -> Unit,
+    onImageSelected: (Uri?) -> Unit,
+    onImageRemove: () -> Unit,
+    onSave: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    val imagePickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri: Uri? ->
+        onImageSelected(uri)
+    }
+
+    Dialog(onDismissRequest = onDismiss) {
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            shape = RoundedCornerShape(16.dp)
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(20.dp)
+                    .verticalScroll(rememberScrollState())
+            ) {
+                Text(
+                    text = "Edit Post",
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold
+                )
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                OutlinedTextField(
+                    value = title,
+                    onValueChange = onTitleChange,
+                    label = { Text("Title (optional)") },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true
+                )
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                OutlinedTextField(
+                    value = content,
+                    onValueChange = onContentChange,
+                    label = { Text("Content") },
+                    modifier = Modifier.fillMaxWidth(),
+                    minLines = 5,
+                    maxLines = 10
+                )
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                Text(
+                    text = "Post Image",
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.Bold
+                )
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                // Show new image if selected
+                if (newImageUri != null) {
+                    Box {
+                        AsyncImage(
+                            model = newImageUri,
+                            contentDescription = "New Post Image",
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(200.dp)
+                                .clip(RoundedCornerShape(8.dp)),
+                            contentScale = ContentScale.Crop
+                        )
+                        IconButton(
+                            onClick = onImageRemove,
+                            modifier = Modifier
+                                .align(Alignment.TopEnd)
+                                .padding(4.dp)
+                                .background(Color.Black.copy(alpha = 0.5f), CircleShape)
+                        ) {
+                            Icon(
+                                Icons.Default.Close,
+                                contentDescription = "Remove",
+                                tint = Color.White
+                            )
+                        }
+                    }
+                    Spacer(modifier = Modifier.height(8.dp))
+                    OutlinedButton(
+                        onClick = { imagePickerLauncher.launch("image/*") },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Icon(Icons.Default.Edit, contentDescription = null)
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("Change Image")
+                    }
+                }
+                // Show existing image
+                else if (currentImageUrl != null) {
+                    Box {
+                        AsyncImage(
+                            model = currentImageUrl,
+                            contentDescription = "Current Post Image",
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(200.dp)
+                                .clip(RoundedCornerShape(8.dp)),
+                            contentScale = ContentScale.Crop
+                        )
+                        IconButton(
+                            onClick = onImageRemove,
+                            modifier = Modifier
+                                .align(Alignment.TopEnd)
+                                .padding(4.dp)
+                                .background(Color.Black.copy(alpha = 0.5f), CircleShape)
+                        ) {
+                            Icon(
+                                Icons.Default.Close,
+                                contentDescription = "Remove",
+                                tint = Color.White
+                            )
+                        }
+                    }
+                    Spacer(modifier = Modifier.height(8.dp))
+                    OutlinedButton(
+                        onClick = { imagePickerLauncher.launch("image/*") },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Icon(Icons.Default.Edit, contentDescription = null)
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("Change Image")
+                    }
+                }
+                // No image
+                else {
+                    OutlinedButton(
+                        onClick = { imagePickerLauncher.launch("image/*") },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Icon(Icons.Default.Add, contentDescription = null)
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("Add Image")
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(20.dp))
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.End
+                ) {
+                    TextButton(onClick = onDismiss) {
+                        Text("Cancel")
+                    }
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Button(
+                        onClick = onSave,
+                        enabled = !isUpdating && content.isNotBlank()
+                    ) {
+                        if (isUpdating) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(20.dp),
+                                color = Color.White
+                            )
+                        } else {
+                            Text("Save")
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun DeletePostDialog(
+    isDeleting: Boolean,
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        icon = {
+            Icon(
+                Icons.Default.Delete,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.error
+            )
+        },
+        title = { Text("Delete Post?") },
+        text = { Text("This will permanently delete this post. This action cannot be undone.") },
+        confirmButton = {
+            Button(
+                onClick = onConfirm,
+                enabled = !isDeleting,
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.colorScheme.error
+                )
+            ) {
+                if (isDeleting) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(20.dp),
+                        color = Color.White
+                    )
+                } else {
+                    Text("Delete")
+                }
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancel")
+            }
+        }
+    )
 }

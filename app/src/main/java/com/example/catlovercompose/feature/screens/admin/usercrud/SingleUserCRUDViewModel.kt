@@ -1,18 +1,13 @@
-package com.example.catlovercompose.feature.profile
+package com.example.catlovercompose.feature.screens.admin.usercrud
 
 import android.net.Uri
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import androidx.navigation.NavController
-import com.example.catlovercompose.core.model.Follower
 import com.example.catlovercompose.core.model.Post
-import com.example.catlovercompose.core.repository.FollowerRepository
 import com.example.catlovercompose.core.repository.PostRepository
 import com.example.catlovercompose.core.repository.UserRepository
 import com.example.catlovercompose.core.util.AuthState
-import com.example.catlovercompose.navigation.NavDestinations
-import com.google.firebase.auth.UserProfileChangeRequest
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -21,189 +16,229 @@ import kotlinx.coroutines.tasks.await
 import javax.inject.Inject
 
 @HiltViewModel
-class ProfileViewModel @Inject constructor(
+class SingleUserCRUDViewModel @Inject constructor(
     private val userRepository: UserRepository,
-    private val postRepository: PostRepository,
-    private val followerRepository: FollowerRepository
+    private val postRepository: PostRepository
 ) : ViewModel() {
 
-    private val _state = MutableStateFlow(ProfileState())
+    private val _state = MutableStateFlow(SingleUserCRUDState())
     val state = _state.asStateFlow()
 
-    private val currentUserId = AuthState.getCurrentUser()?.uid ?: ""
+    private val currentAdminId = AuthState.getCurrentUser()?.uid ?: ""
 
-    init {
-        loadUserData()
-        loadUserPosts()
-    }
-
-    private fun loadUserData() {
-        val user = AuthState.getCurrentUser() ?: return
-
+    /**
+     * Load user data and posts
+     */
+    fun loadUser(userId: String) {
         viewModelScope.launch {
-            _state.value = _state.value.copy(isLoading = true)
+            _state.value = _state.value.copy(
+                userId = userId,
+                isLoading = true
+            )
 
-            userRepository.getUserProfile(user.uid)
+            // Load user profile
+            userRepository.getUserProfile(userId)
                 .onSuccess { profile ->
                     _state.value = _state.value.copy(
-                        username = profile?.username ?: user.displayName ?: "User",
-                        bio = profile?.bio,
-                        email = profile?.email ?: user.email ?: "No email",
+                        username = profile?.username ?: "",
+                        bio = profile?.bio ?: "",
+                        email = profile?.email ?: "",
                         profileImageUrl = profile?.profileImageUrl,
                         age = profile?.age,
                         gender = profile?.gender ?: 2,
                         postCount = profile?.postCount ?: 0,
                         followerCount = profile?.followerCount ?: 0,
                         followingCount = profile?.followingCount ?: 0,
+                        role = profile?.role ?: 0,
                         isLoading = false
                     )
                 }
                 .onFailure { e ->
-                    Log.e("PROFILE", "Failed to load profile: ${e.message}")
+                    Log.e("SingleUserCRUDVM", "Error loading user: ${e.message}")
                     _state.value = _state.value.copy(
-                        username = user.displayName ?: user.email?.substringBefore("@") ?: "User",
-                        bio = "",
-                        email = user.email ?: "No email",
-                        profileImageUrl = null,
-                        age = null,
-                        gender = 2,
-                        postCount = 0,
-                        followerCount = 0,
-                        followingCount = 0,
                         isLoading = false,
-                        error = "Failed to load profile"
+                        error = "Failed to load user: ${e.message}"
                     )
                 }
-        }
-    }
 
-    private fun loadUserPosts() {
-        val user = AuthState.getCurrentUser() ?: return
-
-        viewModelScope.launch {
-            postRepository.getUserPosts(user.uid).collect { posts ->
+            // Load user posts
+            postRepository.getUserPosts(userId).collect { posts ->
                 _state.value = _state.value.copy(userPosts = posts)
-                Log.d("PROFILE", "Loaded ${posts.size} user posts")
             }
         }
     }
 
-    fun uploadProfilePicture(imageUri: Uri) {
-        val user = AuthState.getCurrentUser() ?: return
+    // ==================== EDIT USER ====================
 
-        viewModelScope.launch {
-            _state.value = _state.value.copy(isUploadingImage = true, error = null)
-
-            userRepository.uploadProfilePicture(user.uid, imageUri)
-                .onSuccess { downloadUrl ->
-                    Log.d("PROFILE", "Image uploaded: $downloadUrl")
-                    _state.value = _state.value.copy(
-                        profileImageUrl = downloadUrl,
-                        isUploadingImage = false
-                    )
-                }
-                .onFailure { e ->
-                    Log.e("PROFILE", "Image upload failed: ${e.message}")
-                    _state.value = _state.value.copy(
-                        isUploadingImage = false,
-                        error = "Failed to upload image: ${e.message}"
-                    )
-                }
-        }
+    /**
+     * Show edit user dialog
+     */
+    fun showEditUserDialog() {
+        _state.value = _state.value.copy(
+            showEditUserDialog = true,
+            editUsername = _state.value.username,
+            editBio = _state.value.bio,
+            editAge = _state.value.age?.toString() ?: "",
+            editGender = _state.value.gender
+        )
     }
 
-    fun updateProfile(username: String, bio: String, age: Int?, gender: Int) {
-        val user = AuthState.getCurrentUser() ?: return
+    /**
+     * Hide edit user dialog
+     */
+    fun hideEditUserDialog() {
+        _state.value = _state.value.copy(
+            showEditUserDialog = false,
+            editUsername = "",
+            editBio = "",
+            editAge = "",
+            editGender = 2
+        )
+    }
+
+    /**
+     * Update edit form fields
+     */
+    fun updateEditUsername(value: String) {
+        _state.value = _state.value.copy(editUsername = value)
+    }
+
+    fun updateEditBio(value: String) {
+        _state.value = _state.value.copy(editBio = value)
+    }
+
+    fun updateEditAge(value: String) {
+        _state.value = _state.value.copy(editAge = value)
+    }
+
+    fun updateEditGender(value: Int) {
+        _state.value = _state.value.copy(editGender = value)
+    }
+
+    /**
+     * Save edited user profile
+     */
+    fun saveUserEdit() {
+        val userId = _state.value.userId
+        val username = _state.value.editUsername
+        val bio = _state.value.editBio
+        val age = _state.value.editAge.toIntOrNull()
+        val gender = _state.value.editGender
+
+        if (username.isBlank()) {
+            _state.value = _state.value.copy(error = "Username cannot be empty")
+            return
+        }
 
         viewModelScope.launch {
-            _state.value = _state.value.copy(isSaving = true, error = null)
-
-            user.updateProfile(
-                UserProfileChangeRequest.Builder()
-                    .setDisplayName(username)
-                    .build()
-            ).addOnCompleteListener { authTask ->
-                if (authTask.isSuccessful) {
-                    Log.d("PROFILE", "Auth display name updated")
-                }
-            }
+            _state.value = _state.value.copy(isUpdatingUser = true)
 
             val updates = mapOf(
                 "username" to username,
                 "bio" to bio,
                 "age" to age,
-                "gender" to gender
+                "gender" to gender,
+                "updatedAt" to System.currentTimeMillis()
             )
 
-            userRepository.updateUserProfile(user.uid, updates)
+            userRepository.updateUserProfile(userId, updates)
                 .onSuccess {
-                    Log.d("PROFILE", "Profile updated successfully")
                     _state.value = _state.value.copy(
                         username = username,
                         bio = bio,
                         age = age,
                         gender = gender,
-                        isSaving = false,
-                        error = null
+                        isUpdatingUser = false,
+                        showEditUserDialog = false
                     )
+                    Log.d("SingleUserCRUDVM", "User profile updated")
                 }
                 .onFailure { e ->
-                    Log.e("PROFILE", "Profile update failed: ${e.message}")
+                    Log.e("SingleUserCRUDVM", "Error updating user: ${e.message}")
                     _state.value = _state.value.copy(
-                        isSaving = false,
-                        error = "Failed to update profile: ${e.message}"
+                        isUpdatingUser = false,
+                        error = "Failed to update user: ${e.message}"
                     )
                 }
         }
     }
 
-    // ==================== FOLLOWERS/FOLLOWING ====================
+    // ==================== DELETE USER ====================
 
-    fun showFollowersDialog() {
-        val user = AuthState.getCurrentUser() ?: return
+    /**
+     * Show delete user confirmation dialog
+     */
+    fun showDeleteUserDialog() {
+        _state.value = _state.value.copy(
+            showDeleteUserDialog = true,
+            deleteConfirmUsername = ""
+        )
+    }
+
+    /**
+     * Hide delete user dialog
+     */
+    fun hideDeleteUserDialog() {
+        _state.value = _state.value.copy(
+            showDeleteUserDialog = false,
+            deleteConfirmUsername = ""
+        )
+    }
+
+    /**
+     * Update delete confirmation input
+     */
+    fun updateDeleteConfirmUsername(value: String) {
+        _state.value = _state.value.copy(deleteConfirmUsername = value)
+    }
+
+    /**
+     * Delete user (with all posts and relationships)
+     */
+    fun deleteUser(onSuccess: () -> Unit) {
+        val userId = _state.value.userId
+        val confirmUsername = _state.value.deleteConfirmUsername
+        val actualUsername = _state.value.username
+
+        // Verify username matches
+        if (confirmUsername != actualUsername) {
+            _state.value = _state.value.copy(error = "Username doesn't match")
+            return
+        }
 
         viewModelScope.launch {
-            _state.value = _state.value.copy(
-                showFollowersDialog = true,
-                isLoadingFollowers = true
-            )
+            _state.value = _state.value.copy(isDeletingUser = true)
 
-            followerRepository.getFollowers(user.uid).collect { followers ->
-                _state.value = _state.value.copy(
-                    followers = followers,
-                    isLoadingFollowers = false
-                )
-            }
+            // First, delete all user posts
+            postRepository.deleteAllUserPosts(userId)
+                .onSuccess { deletedPostCount ->
+                    Log.d("SingleUserCRUDVM", "Deleted $deletedPostCount posts")
+                }
+                .onFailure { e ->
+                    Log.w("SingleUserCRUDVM", "Error deleting posts: ${e.message}")
+                }
+
+            // Then delete the user
+            userRepository.deleteUser(userId)
+                .onSuccess {
+                    Log.d("SingleUserCRUDVM", "User deleted successfully")
+                    _state.value = _state.value.copy(
+                        isDeletingUser = false,
+                        showDeleteUserDialog = false
+                    )
+                    onSuccess()
+                }
+                .onFailure { e ->
+                    Log.e("SingleUserCRUDVM", "Error deleting user: ${e.message}")
+                    _state.value = _state.value.copy(
+                        isDeletingUser = false,
+                        error = "Failed to delete user: ${e.message}"
+                    )
+                }
         }
     }
 
-    fun hideFollowersDialog() {
-        _state.value = _state.value.copy(showFollowersDialog = false)
-    }
-
-    fun showFollowingDialog() {
-        val user = AuthState.getCurrentUser() ?: return
-
-        viewModelScope.launch {
-            _state.value = _state.value.copy(
-                showFollowingDialog = true,
-                isLoadingFollowing = true
-            )
-
-            followerRepository.getFollowing(user.uid).collect { following ->
-                _state.value = _state.value.copy(
-                    following = following,
-                    isLoadingFollowing = false
-                )
-            }
-        }
-    }
-
-    fun hideFollowingDialog() {
-        _state.value = _state.value.copy(showFollowingDialog = false)
-    }
-
-    // ==================== POST MANAGEMENT ====================
+    // ==================== POST ACTIONS ====================
 
     /**
      * Show post action modal (edit or delete)
@@ -248,8 +283,8 @@ class ProfileViewModel @Inject constructor(
             showEditPostDialog = false,
             editPostTitle = "",
             editPostContent = "",
-            editPostImageUrl = null,
-            editPostNewImageUri = null
+            editPostImageUrl = null,  // ✅ ADDED
+            editPostNewImageUri = null  // ✅ ADDED
         )
     }
 
@@ -264,16 +299,12 @@ class ProfileViewModel @Inject constructor(
         _state.value = _state.value.copy(editPostContent = value)
     }
 
-    /**
-     * Set new image for post
-     */
+    // ✅ NEW: Set new image for post edit
     fun setEditPostImage(imageUri: Uri?) {
         _state.value = _state.value.copy(editPostNewImageUri = imageUri)
     }
 
-    /**
-     * Remove image from post
-     */
+    // ✅ NEW: Remove image from post edit
     fun removeEditPostImage() {
         _state.value = _state.value.copy(
             editPostImageUrl = null,
@@ -282,7 +313,7 @@ class ProfileViewModel @Inject constructor(
     }
 
     /**
-     * Save edited post with optional new image
+     * Save edited post with image support
      */
     fun savePostEdit() {
         val post = _state.value.selectedPost ?: return
@@ -299,7 +330,7 @@ class ProfileViewModel @Inject constructor(
             _state.value = _state.value.copy(isUpdatingPost = true)
 
             try {
-                // Upload new image if selected
+                // ✅ STEP 1: Upload new image if selected
                 val finalImageUrl = if (newImageUri != null) {
                     val uploadResult = uploadPostImage(newImageUri)
 
@@ -315,16 +346,16 @@ class ProfileViewModel @Inject constructor(
                     _state.value.editPostImageUrl
                 }
 
-                // Update post with new data
+                // ✅ STEP 2: Update post with image
                 postRepository.updatePost(
                     postId = post.id,
                     title = title,
                     content = content,
                     imageUrl = finalImageUrl,
-                    adminUserId = currentUserId
+                    adminUserId = currentAdminId
                 )
                     .onSuccess {
-                        Log.d("PROFILE", "Post updated with image")
+                        Log.d("SingleUserCRUDViewModel", "Post updated with image")
                         _state.value = _state.value.copy(
                             isUpdatingPost = false,
                             showEditPostDialog = false,
@@ -334,14 +365,14 @@ class ProfileViewModel @Inject constructor(
                         )
                     }
                     .onFailure { e ->
-                        Log.e("PROFILE", "Error updating post: ${e.message}")
+                        Log.e("SingleUserCRUDVM", "Error updating post: ${e.message}")
                         _state.value = _state.value.copy(
                             isUpdatingPost = false,
                             error = "Failed to update post: ${e.message}"
                         )
                     }
             } catch (e: Exception) {
-                Log.e("PROFILE", "Error in savePostEdit: ${e.message}")
+                Log.e("SingleUserCRUDVM", "Error in savePostEdit: ${e.message}")
                 _state.value = _state.value.copy(
                     isUpdatingPost = false,
                     error = "Failed to update post: ${e.message}"
@@ -350,9 +381,7 @@ class ProfileViewModel @Inject constructor(
         }
     }
 
-    /**
-     * Upload post image helper
-     */
+    // ✅ NEW: Upload post image helper
     private suspend fun uploadPostImage(imageUri: Uri): Result<String> {
         return try {
             val imageRef = com.google.firebase.storage.FirebaseStorage.getInstance()
@@ -363,7 +392,7 @@ class ProfileViewModel @Inject constructor(
 
             Result.success(downloadUrl)
         } catch (e: Exception) {
-            Log.e("PROFILE", "Error uploading post image: ${e.message}")
+            Log.e("SingleUserCRUDVM", "Error uploading post image: ${e.message}")
             Result.failure(e)
         }
     }
@@ -398,7 +427,7 @@ class ProfileViewModel @Inject constructor(
 
             postRepository.deletePost(post.id, post.userId)
                 .onSuccess {
-                    Log.d("PROFILE", "Post deleted")
+                    Log.d("SingleUserCRUDVM", "Post deleted")
                     _state.value = _state.value.copy(
                         isDeletingPost = false,
                         showDeletePostDialog = false,
@@ -406,7 +435,7 @@ class ProfileViewModel @Inject constructor(
                     )
                 }
                 .onFailure { e ->
-                    Log.e("PROFILE", "Error deleting post: ${e.message}")
+                    Log.e("SingleUserCRUDVM", "Error deleting post: ${e.message}")
                     _state.value = _state.value.copy(
                         isDeletingPost = false,
                         error = "Failed to delete post: ${e.message}"
@@ -421,49 +450,49 @@ class ProfileViewModel @Inject constructor(
     fun clearError() {
         _state.value = _state.value.copy(error = null)
     }
-
-    fun signOut(navController: NavController) {
-        AuthState.signOut()
-        navController.navigate(NavDestinations.SignIn.route) {
-            popUpTo(0) { inclusive = true }
-        }
-    }
 }
 
-data class ProfileState(
+data class SingleUserCRUDState(
+    val userId: String = "",
     val username: String = "",
-    val bio: String? = "",
+    val bio: String = "",
     val email: String = "",
     val profileImageUrl: String? = null,
     val age: Int? = null,
     val gender: Int = 2,
+    val role: Int = 0,
     val postCount: Int = 0,
-
-    // Follower/Following fields
     val followerCount: Int = 0,
     val followingCount: Int = 0,
-    val followers: List<Follower> = emptyList(),
-    val following: List<Follower> = emptyList(),
-    val showFollowersDialog: Boolean = false,
-    val showFollowingDialog: Boolean = false,
-    val isLoadingFollowers: Boolean = false,
-    val isLoadingFollowing: Boolean = false,
+    val userPosts: List<Post> = emptyList(),
 
-    // Post management fields
+    // Loading states
+    val isLoading: Boolean = false,
+    val isUpdatingUser: Boolean = false,
+    val isDeletingUser: Boolean = false,
+    val isUpdatingPost: Boolean = false,
+    val isDeletingPost: Boolean = false,
+
+    // Edit user dialog
+    val showEditUserDialog: Boolean = false,
+    val editUsername: String = "",
+    val editBio: String = "",
+    val editAge: String = "",
+    val editGender: Int = 2,
+
+    // Delete user dialog
+    val showDeleteUserDialog: Boolean = false,
+    val deleteConfirmUsername: String = "",
+
+    // Post actions
     val selectedPost: Post? = null,
     val showPostActionModal: Boolean = false,
     val showEditPostDialog: Boolean = false,
     val showDeletePostDialog: Boolean = false,
     val editPostTitle: String = "",
     val editPostContent: String = "",
-    val editPostImageUrl: String? = null,
-    val editPostNewImageUri: Uri? = null,
-    val isUpdatingPost: Boolean = false,
-    val isDeletingPost: Boolean = false,
+    val editPostImageUrl: String? = null,  // ✅ ADDED
+    val editPostNewImageUri: Uri? = null,  // ✅ ADDED
 
-    val userPosts: List<Post> = emptyList(),
-    val isLoading: Boolean = false,
-    val isUploadingImage: Boolean = false,
-    val isSaving: Boolean = false,
     val error: String? = null
 )

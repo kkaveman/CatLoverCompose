@@ -34,6 +34,6 @@ sealed class NavDestinations(val route: String) {
 
     object AddPost : NavDestinations("addpost")
 
-
+    object SingleUserCRUD : NavDestinations("singleusercrud") // singleusercrud/{userId}
     object SingleEvent : NavDestinations("singleevent") // singleevent/{eventId}
 }

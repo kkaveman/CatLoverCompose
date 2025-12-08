@@ -11,12 +11,17 @@ data class Post(
     val userId: String = "",
     val authorName: String = "",
     val authorProfileUrl: String? = null,
-    val title : String = "",
+    val title: String = "",
     val content: String = "",
     val imageUrl: String? = null,
     val likeCount: Int = 0,
     val commentCount: Int = 0,
-    val likedBy: List<String> = emptyList(), // List of user IDs who liked this post
+    val likedBy: List<String> = emptyList(),
+
+    // ✅ NEW: Edit tracking for admin
+    val lastEditedBy: String? = null,  // Admin user ID who last edited
+    val lastEditedAt: Long? = null,     // Timestamp of last edit
+
     val createdAt: Long = System.currentTimeMillis(),
     val updatedAt: Long = System.currentTimeMillis()
 )
@@ -34,6 +39,11 @@ fun Post.toMap(): Map<String, Any?> = mapOf(
     "likeCount" to likeCount,
     "commentCount" to commentCount,
     "likedBy" to likedBy,
+
+
+    "lastEditedBy" to lastEditedBy,
+    "lastEditedAt" to lastEditedAt,
+
     "createdAt" to createdAt,
     "updatedAt" to updatedAt
 )

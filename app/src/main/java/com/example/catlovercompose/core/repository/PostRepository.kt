@@ -240,4 +240,78 @@ class PostRepository @Inject constructor(
             Result.failure(e)
         }
     }
+
+    //admin operations
+
+    /**
+     * Update post with image (admin/owner edit)
+     */
+    suspend fun updatePost(
+        postId: String,
+        title: String,
+        content: String,
+        imageUrl: String?,
+        adminUserId: String
+    ): Result<Unit> {
+        return try {
+            postsCollection.document(postId).update(
+                mapOf(
+                    "title" to title,
+                    "content" to content,
+                    "imageUrl" to imageUrl,  // ✅ Can be null to remove image
+                    "lastEditedBy" to adminUserId,
+                    "lastEditedAt" to System.currentTimeMillis(),
+                    "updatedAt" to System.currentTimeMillis()
+                )
+            ).await()
+
+            Log.d("PostRepository", "Post updated with image: $postId")
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Log.e("PostRepository", "Error updating post: ${e.message}")
+            Result.failure(e)
+        }
+    }
+
+    suspend fun deleteAllUserPosts(userId: String): Result<Int> {
+        return try {
+            val userPostsSnapshot = postsCollection
+                .whereEqualTo("userId", userId)
+                .get()
+                .await()
+
+            var deletedCount = 0
+
+            userPostsSnapshot.documents.forEach { doc ->
+                val post = doc.toObject(Post::class.java)
+
+                // Delete post image from Storage if exists
+                post?.imageUrl?.let { imageUrl ->
+                    try {
+                        val imageRef = storage.getReferenceFromUrl(imageUrl)
+                        imageRef.delete().await()
+                    } catch (e: Exception) {
+                        Log.w("PostRepository", "Could not delete post image: ${e.message}")
+                    }
+                }
+
+                // Delete post document
+                doc.reference.delete().await()
+                deletedCount++
+            }
+
+            // Reset user's post count to 0
+            usersCollection.document(userId).update("postCount", 0).await()
+
+            Log.d("PostRepository", "Deleted $deletedCount posts for user: $userId")
+            Result.success(deletedCount)
+        } catch (e: Exception) {
+            Log.e("PostRepository", "Error deleting user posts: ${e.message}")
+            Result.failure(e)
+        }
+    }
+
+
+
+
 }

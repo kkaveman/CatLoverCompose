@@ -30,6 +30,7 @@ import com.example.catlovercompose.feature.screens.settings.SettingsScreen
 import com.example.catlovercompose.feature.profile.ProfileScreen
 import com.example.catlovercompose.feature.profile.EditProfileScreen
 import com.example.catlovercompose.feature.profile.OtherProfileScreen
+import com.example.catlovercompose.feature.screens.admin.usercrud.SingleUserCRUDScreen
 import com.example.catlovercompose.feature.screens.chatsection.channel.ChannelScreen
 import com.example.catlovercompose.feature.screens.chatsection.chat.ChatScreen
 
@@ -63,12 +64,21 @@ fun AppShell(mainNavController: NavController) {
     // ✅ UPDATED: Check for routes that should hide TopBar and BottomBar
     val shouldHideShellBars = currentRoute?.startsWith("${NavDestinations.SingleEvent.route}/") == true ||
             currentRoute == NavDestinations.Channel.route ||
+
             currentRoute?.startsWith("${NavDestinations.Chat.route}/") == true ||
             currentRoute == NavDestinations.Profile.route ||
             currentRoute == NavDestinations.EditProfile.route ||
+
             currentRoute?.startsWith("${NavDestinations.OtherProfile.route}/") == true ||
             currentRoute == NavDestinations.Settings.route ||
-            currentRoute == NavDestinations.Admin.route
+            currentRoute == NavDestinations.Admin.route ||
+
+            currentRoute?.startsWith("${NavDestinations.SingleUserCRUD.route}/") == true
+
+
+
+
+
 
     val bottomNavItems = listOf(
         BottomNavItem.Home,
@@ -211,6 +221,10 @@ fun AppShell(mainNavController: NavController) {
                         navController = shellNavController,
                         userId = userId
                     )
+                }
+                composable("${NavDestinations.SingleUserCRUD.route}/{userId}") { backStackEntry ->
+                    val userId = backStackEntry.arguments?.getString("userId") ?: ""
+                    SingleUserCRUDScreen(shellNavController, userId)
                 }
 
                 // Settings & Admin

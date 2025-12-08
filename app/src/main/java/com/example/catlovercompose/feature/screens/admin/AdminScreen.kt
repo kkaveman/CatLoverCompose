@@ -11,12 +11,8 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
-import androidx.navigation.compose.rememberNavController
 import com.example.catlovercompose.feature.screens.admin.eventcrud.EventCRUDScreen
 import com.example.catlovercompose.feature.screens.admin.usercrud.UserCRUDScreen
-import com.example.catlovercompose.feature.screens.community.info.InformationScreen
-import com.example.catlovercompose.feature.screens.community.postsection.postlist.PostListScreen
-import com.example.catlovercompose.feature.screens.community.adoption.AdoptionScreen
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -76,7 +72,7 @@ fun AdminScreen(navController: NavController) {
             ) { page ->
                 when (page) {
                     0 -> EventCRUDScreen()
-                    1 -> UserCRUDScreen()
+                    1 -> UserCRUDScreen(navController = navController)  // ✅ PASS navController
                 }
             }
         }

@@ -15,7 +15,11 @@ import com.example.catlovercompose.feature.auth.signup.SignUpScreen
 import com.example.catlovercompose.feature.profile.ProfileScreen
 import com.example.catlovercompose.feature.profile.EditProfileScreen
 import com.example.catlovercompose.feature.profile.OtherProfileScreen
+
 import com.example.catlovercompose.feature.screens.admin.AdminScreen
+import com.example.catlovercompose.feature.screens.admin.usercrud.SingleUserCRUDScreen
+
+
 import com.example.catlovercompose.feature.screens.settings.SettingsScreen
 
 @Composable
@@ -82,6 +86,13 @@ fun AppNavigation() {
                 navController = navController,
                 channelId = channelId
             )
+        }
+
+
+// ✅ ADD THIS (for Phase 3)
+        composable("${NavDestinations.SingleUserCRUD.route}/{userId}") { backStackEntry ->
+            val userId = backStackEntry.arguments?.getString("userId") ?: ""
+            SingleUserCRUDScreen(navController, userId)
         }
     }
 }

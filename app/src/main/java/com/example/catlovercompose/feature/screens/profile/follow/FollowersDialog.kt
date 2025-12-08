@@ -104,7 +104,7 @@ fun FollowersDialog(
                                     follower = follower,
                                     onClick = {
                                         onUserClick(follower.uid)
-                                        onDismiss()
+
                                     }
                                 )
                             }
