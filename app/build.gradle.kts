@@ -116,9 +116,20 @@ dependencies {
 
     // ===== Permissions Handling =====
     implementation("com.google.accompanist:accompanist-permissions:0.32.0")
+
+    implementation("org.osmdroid:osmdroid-android:6.1.18")
+
+    // Google Play Services Location
+    implementation("com.google.android.gms:play-services-location:21.1.0")
+
+    // AndroidX Preference (for OSMDroid configuration)
+    implementation("androidx.preference:preference-ktx:1.2.1")
+
+
 }
 
 // Allow Gradle to resolve kapt correctly
 kapt {
     correctErrorTypes = true
 }
+

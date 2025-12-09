@@ -64,21 +64,13 @@ fun AppShell(mainNavController: NavController) {
     // ✅ UPDATED: Check for routes that should hide TopBar and BottomBar
     val shouldHideShellBars = currentRoute?.startsWith("${NavDestinations.SingleEvent.route}/") == true ||
             currentRoute == NavDestinations.Channel.route ||
-
             currentRoute?.startsWith("${NavDestinations.Chat.route}/") == true ||
             currentRoute == NavDestinations.Profile.route ||
             currentRoute == NavDestinations.EditProfile.route ||
-
             currentRoute?.startsWith("${NavDestinations.OtherProfile.route}/") == true ||
             currentRoute == NavDestinations.Settings.route ||
             currentRoute == NavDestinations.Admin.route ||
-
             currentRoute?.startsWith("${NavDestinations.SingleUserCRUD.route}/") == true
-
-
-
-
-
 
     val bottomNavItems = listOf(
         BottomNavItem.Home,
@@ -117,12 +109,15 @@ fun AppShell(mainNavController: NavController) {
                         mainNavController.navigate(NavDestinations.SignIn.route) {
                             popUpTo(0) { inclusive = true }
                         }
+                    },
+                    onClose = {
+                        scope.launch { drawerState.close() }
                     }
                 )
             }
         },
-        // ✅ UPDATED: Disable drawer for all screens with custom TopBar
-        gesturesEnabled = !shouldHideShellBars
+        // ⭐ UPDATED: Disable gesture completely - drawer only opens via menu button tap
+        gesturesEnabled = false
     ) {
         Scaffold(
             topBar = {
@@ -256,7 +251,8 @@ fun DrawerContent(
     onNavigateToSettings: () -> Unit,
     onNavigateToProfile: () -> Unit,
     onNavigateToAdmin: () -> Unit,
-    onSignOut: () -> Unit
+    onSignOut: () -> Unit,
+    onClose: () -> Unit // ⭐ Added close callback
 ) {
     val user = AuthState.getCurrentUser()
     val isSignedIn = AuthState.isUserSignedIn()
@@ -269,20 +265,36 @@ fun DrawerContent(
     }
 
     Column {
-        // User Info Header
+        // User Info Header with Close Button
         Surface(
             color = MaterialTheme.colorScheme.primaryContainer,
-            modifier = Modifier.padding(vertical = 16.dp)
+            modifier = Modifier.fillMaxWidth()
         ) {
-            Column(modifier = Modifier.padding(6.dp)) {
-                Text(
-                    text = user?.displayName ?: user?.email?.substringBefore("@") ?: "Guest",
-                    style = MaterialTheme.typography.titleLarge
-                )
-                Text(
-                    text = user?.email ?: "",
-                    style = MaterialTheme.typography.bodyMedium
-                )
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 16.dp, horizontal = 6.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = androidx.compose.ui.Alignment.CenterVertically
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = user?.displayName ?: user?.email?.substringBefore("@") ?: "Guest",
+                        style = MaterialTheme.typography.titleLarge
+                    )
+                    Text(
+                        text = user?.email ?: "",
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                }
+
+                // ⭐ Close button
+                IconButton(onClick = onClose) {
+                    Icon(
+                        imageVector = Icons.Default.Close,
+                        contentDescription = "Close drawer"
+                    )
+                }
             }
         }
 
@@ -295,7 +307,7 @@ fun DrawerContent(
             )
         }
 
-        Divider()
+        HorizontalDivider()
 
         NavigationDrawerItem(
             icon = { Icon(Icons.Default.Settings, contentDescription = null) },
@@ -305,7 +317,7 @@ fun DrawerContent(
         )
 
         if (isSignedIn && isAdmin) {
-            Divider()
+            HorizontalDivider()
             NavigationDrawerItem(
                 icon = { Icon(Icons.Default.Lock, null) },
                 label = { Text("Admin") },
@@ -314,7 +326,7 @@ fun DrawerContent(
             )
         }
 
-        Divider()
+        HorizontalDivider()
 
         NavigationDrawerItem(
             icon = { Icon(Icons.Default.ExitToApp, contentDescription = null) },
