@@ -7,6 +7,8 @@ import com.example.catlovercompose.core.model.Channel
 import com.example.catlovercompose.core.model.Message
 import com.example.catlovercompose.core.model.getOtherParticipant
 import com.example.catlovercompose.core.repository.ChatRepository
+import com.example.catlovercompose.core.repository.UserRepository
+
 import com.example.catlovercompose.core.util.AuthState
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -16,7 +18,8 @@ import javax.inject.Inject
 
 @HiltViewModel
 class ChatViewModel @Inject constructor(
-    private val chatRepository: ChatRepository
+    private val chatRepository: ChatRepository,
+    private val userRepository: UserRepository
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(ChatState())
@@ -42,12 +45,28 @@ class ChatViewModel @Inject constructor(
             chatRepository.getChannel(currentChannelId)
                 .onSuccess { channel ->
                     channel?.let {
-                        val otherParticipant = it.getOtherParticipant(currentUserId)
-                        _state.value = _state.value.copy(
-                            channel = it,
-                            otherUserName = otherParticipant?.username ?: "Unknown",
-                            otherUserProfileUrl = otherParticipant?.profileImageUrl
-                        )
+                        val otherUserId = it.participantIds.firstOrNull { id -> id != currentUserId }
+
+                        // ✅ Fetch fresh user profile
+                        if (otherUserId != null) {
+                            userRepository.getUserProfile(otherUserId)
+                                .onSuccess { profile ->
+                                    _state.value = _state.value.copy(
+                                        channel = it,
+                                        otherUserName = profile?.username ?: "Unknown",
+                                        otherUserProfileUrl = profile?.profileImageUrl // ✅ Fresh data
+                                    )
+                                }
+                                .onFailure { e ->
+                                    // Fallback to cached data
+                                    val otherParticipant = it.getOtherParticipant(currentUserId)
+                                    _state.value = _state.value.copy(
+                                        channel = it,
+                                        otherUserName = otherParticipant?.username ?: "Unknown",
+                                        otherUserProfileUrl = otherParticipant?.profileImageUrl
+                                    )
+                                }
+                        }
                     }
                 }
                 .onFailure { e ->
@@ -58,7 +77,6 @@ class ChatViewModel @Inject constructor(
                 }
         }
     }
-
     /**
      * Load messages (real-time)
      */

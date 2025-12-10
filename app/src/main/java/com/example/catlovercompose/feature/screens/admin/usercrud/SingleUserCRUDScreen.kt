@@ -224,7 +224,44 @@ fun SingleUserCRUDScreen(
                         }
                     }
 
+
+
                     Spacer(modifier = Modifier.height(16.dp))
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    if (uiState.role == 0) {
+                        // User is NOT admin - show promote button
+                        Button(
+                            onClick = { viewModel.showPromoteAdminDialog() },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = MaterialTheme.colorScheme.tertiaryContainer,
+                                contentColor = MaterialTheme.colorScheme.onTertiaryContainer
+                            )
+                        ) {
+                            Icon(Icons.Default.Star, contentDescription = null, modifier = Modifier.size(18.dp))
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text("Promote to Admin")
+                        }
+                    } else {
+                        // User IS admin - show demote button
+                        OutlinedButton(
+                            onClick = { viewModel.showPromoteAdminDialog() },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp),
+                            colors = ButtonDefaults.outlinedButtonColors(
+                                contentColor = MaterialTheme.colorScheme.tertiary
+                            )
+                        ) {
+                            Icon(Icons.Default.Clear, contentDescription = null, modifier = Modifier.size(18.dp))
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text("Remove Admin Role")
+                        }
+                    }
 
                     Divider()
 
@@ -394,6 +431,23 @@ fun SingleUserCRUDScreen(
             onDismiss = { viewModel.hideDeletePostDialog() }
         )
     }
+
+    if (uiState.showPromoteAdminDialog) {
+        PromoteAdminDialog(
+            username = uiState.username,
+            currentRole = uiState.role,
+            isUpdating = uiState.isPromotingAdmin,
+            onConfirm = {
+                if (uiState.role == 0) {
+                    viewModel.promoteToAdmin()
+                } else {
+                    viewModel.demoteFromAdmin()
+                }
+            },
+            onDismiss = { viewModel.hidePromoteAdminDialog() }
+        )
+    }
+
 }
 
 @Composable
@@ -955,3 +1009,88 @@ fun DeletePostDialog(
         }
     )
 }
+
+@Composable
+fun PromoteAdminDialog(
+    username: String,
+    currentRole: Int,
+    isUpdating: Boolean,
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    val isPromoting = currentRole == 0 // true if promoting, false if demoting
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        icon = {
+            Icon(
+                if (isPromoting) Icons.Default.Star else Icons.Default.Clear,
+                contentDescription = null,
+                tint = if (isPromoting)
+                    MaterialTheme.colorScheme.tertiary
+                else
+                    MaterialTheme.colorScheme.error
+            )
+        },
+        title = {
+            Text(if (isPromoting) "Promote to Admin?" else "Remove Admin Role?")
+        },
+        text = {
+            Column {
+                if (isPromoting) {
+                    Text("Are you sure you want to promote \"$username\" to admin?")
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Text(
+                        text = "Admin privileges include:",
+                        fontWeight = FontWeight.Bold,
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text("• View and manage all users", style = MaterialTheme.typography.bodySmall)
+                    Text("• Edit and delete any post", style = MaterialTheme.typography.bodySmall)
+                    Text("• Delete user accounts", style = MaterialTheme.typography.bodySmall)
+                    Text("• Full system access", style = MaterialTheme.typography.bodySmall)
+                } else {
+                    Text("Are you sure you want to remove admin privileges from \"$username\"?")
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Text(
+                        text = "This will:",
+                        fontWeight = FontWeight.Bold,
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text("• Remove all admin privileges", style = MaterialTheme.typography.bodySmall)
+                    Text("• Restrict account to regular user", style = MaterialTheme.typography.bodySmall)
+                    Text("• User data will remain intact", style = MaterialTheme.typography.bodySmall)
+                }
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = onConfirm,
+                enabled = !isUpdating,
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = if (isPromoting)
+                        MaterialTheme.colorScheme.tertiary
+                    else
+                        MaterialTheme.colorScheme.error
+                )
+            ) {
+                if (isUpdating) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(20.dp),
+                        color = Color.White
+                    )
+                } else {
+                    Text(if (isPromoting) "Promote" else "Remove Admin")
+                }
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancel")
+            }
+        }
+    )
+}
+

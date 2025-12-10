@@ -117,12 +117,17 @@ fun ChannelScreen(
                     modifier = Modifier.fillMaxSize()
                 ) {
                     items(uiState.filteredChannels) { channel ->
-                        val otherParticipant = channel.getOtherParticipant(currentUserId)
+                        val otherUserId = channel.participantIds.firstOrNull { it != currentUserId }
+
+                        // ✅ Use fresh user profile data instead of cached participantData
+                        val otherUser = otherUserId?.let { uiState.userProfiles[it] }
+                        val fallbackData = channel.getOtherParticipant(currentUserId)
 
                         ChannelItem(
-                            username = otherParticipant?.username ?: "Unknown",
-                            email = otherParticipant?.email ?: "",
-                            profileImageUrl = otherParticipant?.profileImageUrl,
+                            username = otherUser?.username ?: fallbackData?.username ?: "Unknown",
+                            email = otherUser?.email ?: fallbackData?.email ?: "",
+                            profileImageUrl = otherUser?.profileImageUrl
+                                ?: fallbackData?.profileImageUrl, // ✅ Fresh data
                             lastMessage = channel.lastMessage,
                             lastMessageTime = channel.lastMessageTime,
                             onClick = {

@@ -6,6 +6,7 @@ import androidx.lifecycle.viewModelScope
 import com.example.catlovercompose.core.model.Channel
 import com.example.catlovercompose.core.model.UserProfile
 import com.example.catlovercompose.core.repository.ChatRepository
+import com.example.catlovercompose.core.repository.UserRepository
 import com.example.catlovercompose.core.util.AuthState
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -15,13 +16,15 @@ import javax.inject.Inject
 
 @HiltViewModel
 class ChannelViewModel @Inject constructor(
-    private val chatRepository: ChatRepository
+    private val chatRepository: ChatRepository,
+    private val userRepository: UserRepository
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(ChannelState())
     val state = _state.asStateFlow()
 
     private val currentUserId = AuthState.getCurrentUser()?.uid ?: ""
+    private val userProfileCache = mutableMapOf<String, UserProfile>()
 
     init {
         if (currentUserId.isNotEmpty()) {
@@ -37,16 +40,29 @@ class ChannelViewModel @Inject constructor(
             _state.value = _state.value.copy(isLoading = true)
 
             chatRepository.getUserChannels(currentUserId).collect { channels ->
+                // ✅ Fetch fresh user data for all participants
+                val channelsWithFreshData = channels.map { channel ->
+                    val otherUserId = channel.participantIds.firstOrNull { it != currentUserId }
+                    if (otherUserId != null && !userProfileCache.containsKey(otherUserId)) {
+                        // Fetch user profile if not cached
+                        userRepository.getUserProfile(otherUserId)
+                            .onSuccess { profile ->
+                                profile?.let { userProfileCache[otherUserId] = it }
+                            }
+                    }
+                    channel
+                }
+
                 _state.value = _state.value.copy(
-                    channels = channels,
-                    filteredChannels = channels,
-                    isLoading = false
+                    channels = channelsWithFreshData,
+                    filteredChannels = channelsWithFreshData,
+                    isLoading = false,
+                    userProfiles = userProfileCache.toMap() // ✅ Store profiles
                 )
                 Log.d("ChannelViewModel", "Loaded ${channels.size} channels")
             }
         }
     }
-
     /**
      * Search channels by username
      */
@@ -173,5 +189,6 @@ data class ChannelState(
     val searchedUser: UserProfile? = null,
     val isSearchingUser: Boolean = false,
     val isCreatingChannel: Boolean = false,
-    val userSearchError: String? = null
+    val userSearchError: String? = null,
+    val userProfiles: Map<String, UserProfile> = emptyMap()
 )

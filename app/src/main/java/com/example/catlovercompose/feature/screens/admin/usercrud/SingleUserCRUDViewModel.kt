@@ -163,6 +163,88 @@ class SingleUserCRUDViewModel @Inject constructor(
         }
     }
 
+    // ==================== PROMOTE TO ADMIN ====================
+
+    /**
+     * Show promote to admin confirmation dialog
+     */
+    fun showPromoteAdminDialog() {
+        _state.value = _state.value.copy(showPromoteAdminDialog = true)
+    }
+
+    /**
+     * Hide promote to admin dialog
+     */
+    fun hidePromoteAdminDialog() {
+        _state.value = _state.value.copy(showPromoteAdminDialog = false)
+    }
+
+    /**
+     * Promote user to admin (role = 1)
+     */
+    fun promoteToAdmin() {
+        val userId = _state.value.userId
+
+        viewModelScope.launch {
+            _state.value = _state.value.copy(isPromotingAdmin = true)
+
+            val updates = mapOf(
+                "role" to 1,
+                "updatedAt" to System.currentTimeMillis()
+            )
+
+            userRepository.updateUserProfile(userId, updates)
+                .onSuccess {
+                    _state.value = _state.value.copy(
+                        role = 1,
+                        isPromotingAdmin = false,
+                        showPromoteAdminDialog = false
+                    )
+                    Log.d("SingleUserCRUDVM", "User promoted to admin")
+                }
+                .onFailure { e ->
+                    Log.e("SingleUserCRUDVM", "Error promoting user: ${e.message}")
+                    _state.value = _state.value.copy(
+                        isPromotingAdmin = false,
+                        error = "Failed to promote user: ${e.message}"
+                    )
+                }
+        }
+    }
+
+    /**
+     * Demote admin to regular user (role = 0)
+     */
+    fun demoteFromAdmin() {
+        val userId = _state.value.userId
+
+        viewModelScope.launch {
+            _state.value = _state.value.copy(isPromotingAdmin = true)
+
+            val updates = mapOf(
+                "role" to 0,
+                "updatedAt" to System.currentTimeMillis()
+            )
+
+            userRepository.updateUserProfile(userId, updates)
+                .onSuccess {
+                    _state.value = _state.value.copy(
+                        role = 0,
+                        isPromotingAdmin = false,
+                        showPromoteAdminDialog = false
+                    )
+                    Log.d("SingleUserCRUDVM", "User demoted from admin")
+                }
+                .onFailure { e ->
+                    Log.e("SingleUserCRUDVM", "Error demoting user: ${e.message}")
+                    _state.value = _state.value.copy(
+                        isPromotingAdmin = false,
+                        error = "Failed to demote user: ${e.message}"
+                    )
+                }
+        }
+    }
+
     // ==================== DELETE USER ====================
 
     /**
@@ -270,8 +352,8 @@ class SingleUserCRUDViewModel @Inject constructor(
             showPostActionModal = false,
             editPostTitle = post.title,
             editPostContent = post.content,
-            editPostImageUrl = post.imageUrl,  // ✅ ADDED
-            editPostNewImageUri = null  // ✅ ADDED
+            editPostImageUrl = post.imageUrl,
+            editPostNewImageUri = null
         )
     }
 
@@ -283,8 +365,8 @@ class SingleUserCRUDViewModel @Inject constructor(
             showEditPostDialog = false,
             editPostTitle = "",
             editPostContent = "",
-            editPostImageUrl = null,  // ✅ ADDED
-            editPostNewImageUri = null  // ✅ ADDED
+            editPostImageUrl = null,
+            editPostNewImageUri = null
         )
     }
 
@@ -299,12 +381,10 @@ class SingleUserCRUDViewModel @Inject constructor(
         _state.value = _state.value.copy(editPostContent = value)
     }
 
-    // ✅ NEW: Set new image for post edit
     fun setEditPostImage(imageUri: Uri?) {
         _state.value = _state.value.copy(editPostNewImageUri = imageUri)
     }
 
-    // ✅ NEW: Remove image from post edit
     fun removeEditPostImage() {
         _state.value = _state.value.copy(
             editPostImageUrl = null,
@@ -330,7 +410,6 @@ class SingleUserCRUDViewModel @Inject constructor(
             _state.value = _state.value.copy(isUpdatingPost = true)
 
             try {
-                // ✅ STEP 1: Upload new image if selected
                 val finalImageUrl = if (newImageUri != null) {
                     val uploadResult = uploadPostImage(newImageUri)
 
@@ -342,11 +421,9 @@ class SingleUserCRUDViewModel @Inject constructor(
                         return@launch
                     }
                 } else {
-                    // Keep existing image URL (or null if removed)
                     _state.value.editPostImageUrl
                 }
 
-                // ✅ STEP 2: Update post with image
                 postRepository.updatePost(
                     postId = post.id,
                     title = title,
@@ -381,7 +458,6 @@ class SingleUserCRUDViewModel @Inject constructor(
         }
     }
 
-    // ✅ NEW: Upload post image helper
     private suspend fun uploadPostImage(imageUri: Uri): Result<String> {
         return try {
             val imageRef = com.google.firebase.storage.FirebaseStorage.getInstance()
@@ -472,6 +548,7 @@ data class SingleUserCRUDState(
     val isDeletingUser: Boolean = false,
     val isUpdatingPost: Boolean = false,
     val isDeletingPost: Boolean = false,
+    val isPromotingAdmin: Boolean = false, // ✅ NEW
 
     // Edit user dialog
     val showEditUserDialog: Boolean = false,
@@ -484,6 +561,9 @@ data class SingleUserCRUDState(
     val showDeleteUserDialog: Boolean = false,
     val deleteConfirmUsername: String = "",
 
+    // Promote admin dialog
+    val showPromoteAdminDialog: Boolean = false, // ✅ NEW
+
     // Post actions
     val selectedPost: Post? = null,
     val showPostActionModal: Boolean = false,
@@ -491,8 +571,8 @@ data class SingleUserCRUDState(
     val showDeletePostDialog: Boolean = false,
     val editPostTitle: String = "",
     val editPostContent: String = "",
-    val editPostImageUrl: String? = null,  // ✅ ADDED
-    val editPostNewImageUri: Uri? = null,  // ✅ ADDED
+    val editPostImageUrl: String? = null,
+    val editPostNewImageUri: Uri? = null,
 
     val error: String? = null
 )

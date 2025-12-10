@@ -98,6 +98,7 @@ dependencies {
     implementation("com.google.firebase:firebase-database:22.0.1")
     implementation("com.google.firebase:firebase-storage:22.0.1")
     implementation("com.google.firebase:firebase-firestore:26.0.2")
+    implementation("com.google.firebase:firebase-messaging:23.4.0")
     implementation(libs.firebase.crashlytics.buildtools)
 
     // ===== TensorFlow Lite for YOLO Detection =====
@@ -127,6 +128,8 @@ dependencies {
 
     implementation("com.google.code.gson:gson:2.10.1")
     implementation("io.coil-kt:coil-compose:2.5.0")
+
+    implementation("androidx.datastore:datastore-preferences:1.0.0")
 
 }
 
