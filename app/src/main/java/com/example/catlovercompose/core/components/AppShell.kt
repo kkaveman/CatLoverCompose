@@ -174,7 +174,7 @@ fun AppShell(mainNavController: NavController) {
             ) {
                 // Bottom Nav Screens
                 composable(NavDestinations.Home.route) {
-                    HomeScreen(mainNavController)
+                    HomeScreen(shellNavController)
                 }
                 composable(NavDestinations.Event.route) {
                     EventScreen(shellNavController)

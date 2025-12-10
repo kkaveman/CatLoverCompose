@@ -180,30 +180,28 @@ private fun CameraPreview(
                     .build()
                     .also { analysis ->
                         analysis.setAnalyzer(cameraExecutor) { imageProxy ->
-                            val bitmapBuffer = Bitmap.createBitmap(
-                                imageProxy.width,
-                                imageProxy.height,
-                                Bitmap.Config.ARGB_8888
-                            )
-                            imageProxy.use {
-                                bitmapBuffer.copyPixelsFromBuffer(imageProxy.planes[0].buffer)
+                            // ✅ FIX: Proper bitmap creation and rotation
+                            val bitmap = imageProxy.toBitmap() // Use built-in method
+
+                            // ✅ FIX: Handle rotation properly
+                            val rotationDegrees = imageProxy.imageInfo.rotationDegrees
+                            val rotatedBitmap = if (rotationDegrees != 0) {
+                                rotateBitmap(bitmap, rotationDegrees)
+                            } else {
+                                bitmap
                             }
 
-                            val matrix = Matrix().apply {
-                                postRotate(imageProxy.imageInfo.rotationDegrees.toFloat())
+                            // ✅ FIX: Ensure detection happens before closing imageProxy
+                            try {
+                                detector?.detect(rotatedBitmap)
+                            } finally {
+                                // Clean up
+                                if (rotatedBitmap != bitmap) {
+                                    rotatedBitmap.recycle()
+                                }
+                                bitmap.recycle()
+                                imageProxy.close() // ✅ IMPORTANT: Close after processing
                             }
-
-                            val rotatedBitmap = Bitmap.createBitmap(
-                                bitmapBuffer,
-                                0,
-                                0,
-                                bitmapBuffer.width,
-                                bitmapBuffer.height,
-                                matrix,
-                                true
-                            )
-
-                            detector?.detect(rotatedBitmap)
                         }
                     }
 
@@ -218,7 +216,6 @@ private fun CameraPreview(
                         imageAnalyzer
                     )
 
-                    // Notify that camera is ready
                     onCameraReady(camera)
                 } catch (e: Exception) {
                     e.printStackTrace()
@@ -228,6 +225,24 @@ private fun CameraPreview(
             previewView
         },
         modifier = Modifier.fillMaxSize()
+    )
+}
+
+private fun rotateBitmap(bitmap: Bitmap, rotationDegrees: Int): Bitmap {
+    if (rotationDegrees == 0) return bitmap
+
+    val matrix = Matrix().apply {
+        postRotate(rotationDegrees.toFloat())
+    }
+
+    return Bitmap.createBitmap(
+        bitmap,
+        0,
+        0,
+        bitmap.width,
+        bitmap.height,
+        matrix,
+        true
     )
 }
 

@@ -11,6 +11,7 @@ import com.example.catlovercompose.feature.screens.chatsection.channel.ChannelSc
 import com.example.catlovercompose.feature.screens.chatsection.chat.ChatScreen
 import com.example.catlovercompose.feature.auth.signin.SignInScreen
 import com.example.catlovercompose.feature.auth.signup.SignUpScreen
+import com.example.catlovercompose.feature.event.EventScreen
 
 import com.example.catlovercompose.feature.profile.ProfileScreen
 import com.example.catlovercompose.feature.profile.EditProfileScreen
@@ -18,6 +19,7 @@ import com.example.catlovercompose.feature.profile.OtherProfileScreen
 
 import com.example.catlovercompose.feature.screens.admin.AdminScreen
 import com.example.catlovercompose.feature.screens.admin.usercrud.SingleUserCRUDScreen
+import com.example.catlovercompose.feature.screens.event.SingleEventScreen
 
 
 import com.example.catlovercompose.feature.screens.settings.SettingsScreen
@@ -89,10 +91,24 @@ fun AppNavigation() {
         }
 
 
-// ✅ ADD THIS (for Phase 3)
+
         composable("${NavDestinations.SingleUserCRUD.route}/{userId}") { backStackEntry ->
             val userId = backStackEntry.arguments?.getString("userId") ?: ""
             SingleUserCRUDScreen(navController, userId)
+        }
+
+        composable("${NavDestinations.SingleEvent.route}/{eventId}") { backStackEntry ->
+            val eventId = backStackEntry.arguments?.getString("eventId") ?: ""
+            SingleEventScreen(
+                navController = navController,
+                eventId = eventId
+            )
+        }
+
+        composable(NavDestinations.EventScreen.route) {
+            EventScreen(
+                navController = navController,
+            )
         }
     }
 }
